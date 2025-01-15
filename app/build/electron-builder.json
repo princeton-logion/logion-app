@@ -1,1 +1,0 @@
-json { "productName": "Logion", "appId": "logion.app", "copyright": "Copyright", "files": [ "build/**/*", "main.js" ], "directories": { "output": "release" }, "win": { "target": "nsis" }, "mac": { "target": "dmg" }, "linux": { "target": "deb" } } 

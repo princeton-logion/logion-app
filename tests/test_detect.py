@@ -2,8 +2,8 @@ import pytest
 import torch
 import numpy as np
 from unittest.mock import MagicMock
-from ..detection import detect
-from ..detection import logion_class
+from ..src.backend.detection import detect
+from ..src.backend.detection import logion_class
 
 
 """

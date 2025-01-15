@@ -1,7 +1,7 @@
 import pytest
 import torch
 from unittest.mock import MagicMock
-from ..detection import logion_class
+from ..src.backend.detection import logion_class
 
 
 """

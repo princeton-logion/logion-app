@@ -1,0 +1,14 @@
+site_name: "Logion: Machine Learning for Greek Philology"
+site_url: "https://princeton-logion.github.io/logion-app/"
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Light mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Dark mode
+

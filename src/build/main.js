@@ -61,10 +61,21 @@ function createMainWindow() {
 }
 
 function startBackend() {
-    const backendPath = path.join(
-        process.resourcesPath,
-        'extraResources', 'main' // Assuming your PyInstaller executable is in this path
-    );
+    let backendPath;
+
+    // Determine the platform and set the backend path
+    if (process.platform === 'win32') {
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // Windows executable
+    } else if (process.platform === 'darwin') {
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // macOS executable
+    } else if (process.platform === 'linux') {
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // Linux executable
+    } else {
+        log.error('Unsupported platform');
+        app.quit();
+        return;
+    }
+
     log.info('Resources Path:', process.resourcesPath);
     log.info('Backend Path:', backendPath);
 
@@ -98,6 +109,7 @@ function startBackend() {
         log.info(`Backend process exited with code ${code}`);
     });
 }
+
 
 async function waitForBackendReady() {
     const healthEndpoint = 'http://localhost:8000/health';

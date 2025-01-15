@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
-from ..prediction import predict
-from ..models import model_loader
+from ..src.backend.prediction import predict
+from ..src.backend.models import model_loader
 
 
 """

@@ -1,7 +1,7 @@
 import pytest
 from transformers import BertTokenizer, BertForMaskedLM, ElectraTokenizer, ElectraForMaskedLM
 from unittest.mock import patch
-from ..models import model_loader
+from ..src.backend.models import model_loader
 
 """
 load_encoder tests
