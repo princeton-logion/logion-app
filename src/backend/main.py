@@ -13,7 +13,7 @@ from utils import prediction_schemas, detection_schemas
 from prediction import predict
 from detection import logion_class, detect
 import random
-import include # necessary to find root folder when running from a dist folder
+import include
 import uvicorn
 
 
@@ -29,6 +29,8 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
+
+
 # set up log
 log_file_path = os.environ.get("LOGION_LOG_PATH", "logion-app.log")
 logging.basicConfig(filename=log_file_path,
@@ -37,7 +39,11 @@ logging.basicConfig(filename=log_file_path,
 logging.info(f"API logging configured at: {log_file_path}")
 
 
+
+
 app = FastAPI(title="Logion", port=8000)
+
+
 
 # CORS middleware
 app.add_middleware(
@@ -108,7 +114,7 @@ def load_config_from_url(url):
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to retrieve model config file via URL: {e}")
     
-    # Attempt to load from local file if URL fails
+    # attempt local file load if URL fails
     try:
         if hasattr(sys, '_MEIPASS'):
             local_path = os.path.join(sys._MEIPASS, 'model_config.yaml')
@@ -151,7 +157,7 @@ def load_filter_from_url(url):
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to retrieve Lev filter file via URL: {e}")
     
-    # Attempt to load from local file if URL fails
+    # attempt local file load if URL fails
     try:
         if hasattr(sys, '_MEIPASS'):
             local_path = os.path.join(sys._MEIPASS, 'lev_filter.npy')
@@ -291,6 +297,8 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
     except Exception as e:
         logging.exception(f"Error during detection task: {e}")
         raise HTTPException(status_code=500, detail="Error during prediction.") from e
+
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

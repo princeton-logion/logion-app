@@ -5,7 +5,20 @@ import numpy as np
 
 
 def prediction_function(text: str, model: str, tokenizer: str, device, window_size: int=512, overlap: int=128, num_predictions: int=5):
-
+    """
+    Masked language modeling inference using sliding window
+    
+    Parameters:
+        text (str) -- input text
+        model (str) -- encoder-only model
+        tokenizer (str) -- tokenizer for model
+        window_size (int) -- sliding window size
+        overlap (int) -- sliding window overlap
+        num_predictions (int) -- number of suggestions per word
+    
+    Returns
+        final_predictions (dict) -- {mask_token_index_1: [(predicted_token_1, probability_score_1), ...], ...}
+    """
     # set seed for reproducibiilty
     seed_value = 42
     np.random.seed(seed_value)
@@ -49,15 +62,15 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
    
     final_predictions = {}
     for masked_index, prediction_list in all_predictions.items():
-        #Group subword predictions
+        # group subword predictions
         subword_groups = {}
         for token, prob in prediction_list:
             if token.startswith("##"):
-                base_word = token[2:] # Remove "##" prefix to get the base word
+                base_word = token[2:] # remove "##" prefix
                 if base_word not in subword_groups:
                     subword_groups[base_word] = []
                 subword_groups[base_word].append((token, prob))
-            else: #Whole word token
+            else: # whole word token
                 subword_groups[token] = [(token, prob)]
         logging.info(f"Subword groups: {subword_groups}")
 
@@ -70,7 +83,7 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
 
           whole_word_predictions.append((base_word, max_prob))
 
-        #Sort by probability and keep top num_predictions
+        # sort by prob, keep top num_predictions
         sorted_predictions = sorted(whole_word_predictions, key=lambda x: x[1], reverse=True)
         final_predictions[masked_index] = sorted_predictions[:num_predictions]
 

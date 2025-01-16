@@ -3,16 +3,17 @@ import torch
 import logging
 import platform
 
-"""
-Load encoder-only model using HF transformers library
 
-Parameters:
-    model_name (str) -- name of model (received from front-end list)
-
-Return:
-    model (in eval mode) and tokenizer
-"""
 def load_encoder(model_name: str, model_type: str):
+    """
+    Load encoder-only model using HF transformers library
+    
+    Parameters:
+        model_name (str) -- name of model (received from front-end list)
+    
+    Return:
+        model (in eval mode) and tokenizer
+    """
     try:
         tokenizer_name = "princeton-logion/LOGION-50k_wordpiece"
         if not model_name.startswith("princeton-logion"):
@@ -31,18 +32,18 @@ def load_encoder(model_name: str, model_type: str):
         raise
 
 
-"""
-Load model to device
-
-Parameters:
-    model (torch.nn.Module) -- model in eval mode
-
-Returns:
-    device -- loaded device (cuda, mps or cpu)
-    model -- model loaded to GPU/CPU
-"""
 
 def load_device(model: torch.nn.Module):
+    """
+    Load model to device
+    
+    Parameters:
+        model (torch.nn.Module) -- model in eval mode
+    
+    Returns:
+        device -- loaded device (cuda, mps or cpu)
+        model -- model loaded to GPU/CPU
+    """
     logging.info(f"CUDA available: {torch.cuda.is_available()}")
     if torch.cuda.is_available():
         logging.info(f"CUDA version: {torch.version.cuda}")
