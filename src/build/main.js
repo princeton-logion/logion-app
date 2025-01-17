@@ -18,7 +18,7 @@ function createLoadingWindow() {
         height: 300,
         frame: false,
         transparent: true,
-        alwaysOnTop: true,
+        alwaysOnTop: false,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
