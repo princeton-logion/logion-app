@@ -22,14 +22,17 @@ jobs:
       with:
         python-version: 3.x
 
-    - name: Install dependencies
+    - name: Install Windows dependencies
+      if: matrix.os == 'windows-latest'
       run: |
         pip install -r requirements.txt || true
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-        elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-        fi
+        pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
+
+    - name: Install MacOS dependencies
+      if: matrix.os == 'macos-latest'
+      run: |
+        pip install -r requirements.txt || true
+        pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
 
     - name: Build executable
       run: |
