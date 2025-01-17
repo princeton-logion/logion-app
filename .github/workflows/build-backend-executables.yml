@@ -24,7 +24,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        pip install -r requirements.txt || true
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        fi
 
     - name: Build executable
       run: |

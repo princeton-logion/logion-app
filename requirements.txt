@@ -8,6 +8,5 @@ pyinstaller
 PyYAML
 pytest
 Requests
-torch
 transformers
 uvicorn
