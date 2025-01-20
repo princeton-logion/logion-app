@@ -27,14 +27,14 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: windows-executables
-        path: ./backend/dist
+        path: ./src/backend/dist
 
     - name: Download Backend Artifact
       if: matrix.os == 'macos-latest'
       uses: actions/download-artifact@v4
       with:
         name: macos-executables
-        path: ./backend/dist
+        path: ./src/backend/dist
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -43,21 +43,25 @@ jobs:
 
     - name: Install Dependencies
       run: npm install
+      with:
+        path: ./src/build
 
     - name: Build Electron App
       run: |
         npm run build
+      with:
+        path: ./src/build
 
     - name: Create Windows Artifact
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: windows-packaged-app
-        path: dist/
+        path: ./src/build/dist/
 
     - name: Create MacOS Artifact
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
         name: macos-packaged-app
-        path: dist/
+        path: ./src/build/dist/
