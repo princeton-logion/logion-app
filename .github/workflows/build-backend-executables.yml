@@ -39,8 +39,78 @@ jobs:
         pyinstaller --onefile --paths . --add-data "urls.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py
       working-directory: ./src/backend/
 
-    - name: Create Artifact
+    - name: Create Windows Artifact
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: backend-executables
+        name: windows-executables
         path: ./src/backend/dist/
+
+    - name: Create MacOS Artifact
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-executables
+        path: ./src/backend/dist/
+
+    - name: List files in dist folder
+      run: ls -R ./src/backend/dist/
+  
+  package:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'macos-latest']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
+
+    - name: Download Backend Artifact
+      if: matrix.os == 'windows-latest'
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-executables
+        path: ./src/backend/dist
+
+    - name: Download Backend Artifact
+      if: matrix.os == 'macos-latest'
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-executables
+        path: ./src/backend/dist
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '16'
+
+    - name: Install Dependencies
+      run: |
+        npm install
+      working-directory: ./src/build/
+
+    - name: Build Electron App
+      run: |
+        npm run build
+      working-directory: ./src/build/
+
+    - name: Create Windows Artifact
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-packaged-app
+        path: ./src/build/dist/
+
+    - name: Create MacOS Artifact
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-packaged-app
+        path: ./src/build/dist/
