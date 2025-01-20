@@ -89,3 +89,12 @@ jobs:
       - name: List files in build/dist folder
         run: |
           ls -R ./src/build/dist/
+          
+    - name: Download app pkgs
+      uses: actions/download-artifact@v4
+      with:
+        path: ./${{ matrix.os }}-app
+    
+    - name: Display downloaded files
+      run: |
+        ls -R ./${{ matrix.os }}-dir
