@@ -77,19 +77,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packaged-app-windows
-          path: ./src/build/dist-win/
+          path: ./src/build/dist/
           
       - name: Create Packaged App Mac
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: packaged-app-mac
-          path: ./src/build/dist-mac/
+          path: ./src/build/dist/
           
       - name: List files in build/dist folder
         run: |
-          ls -R ./src/build/dist-mac/
-        
-      - name: List files in build/dist folder
-        run: |
-          ls -R ./src/build/dist-win/
+          ls -R ./src/build/dist/
