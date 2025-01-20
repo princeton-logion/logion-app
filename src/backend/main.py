@@ -277,7 +277,7 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
         # format results for response class
         formatted_results = []
         for (original_word, chance_score, global_word_index), suggestions in results.items():
-            formatted_suggestions = [detection_schemas.MaskPrediction(token=sug, probability=prob) for sug, prob in suggestions]
+            formatted_suggestions = [detection_schemas.MaskPrediction(token=sug, prob=prob) for sug, prob in suggestions]
             formatted_results.append(detection_schemas.WordPrediction(original_word=original_word, chance_score=chance_score, global_word_index=global_word_index, suggestions=formatted_suggestions))
         logging.info(f"{detection_schemas.MaskPrediction}")
         logging.info(f"{detection_schemas.WordPrediction}")
@@ -301,4 +301,9 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
 
 
 if __name__ == "__main__":
+    # initialize all variables prior to starting the server
+    logging.info("Initializing variables prior to starting the server")
+    load_urls_from_config(urls_config)
+    load_config_from_url(MODEL_CONFIG_URL)
+    logging.info("All variable initialized, starting server")
     uvicorn.run(app, host="127.0.0.1", port=8000)
