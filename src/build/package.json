@@ -53,12 +53,6 @@
         "dmg"
       ],
       "icon": "icons/icon.png"
-    },
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "icon": "icons/icon.png"
     }
   }
 }
