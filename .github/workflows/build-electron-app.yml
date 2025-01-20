@@ -43,14 +43,10 @@ jobs:
 
     - name: Install Dependencies
       run: npm install
-      with:
-        path: ./src/build
 
     - name: Build Electron App
       run: |
         npm run build
-      with:
-        path: ./src/build
 
     - name: Create Windows Artifact
       if: matrix.os == 'windows-latest'
