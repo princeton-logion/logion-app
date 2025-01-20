@@ -7,7 +7,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --mac",
+    "build": "electron-builder",
     "dev": "concurrently \"npm run start\" \"cd ../backend && source logion-venv/bin/activate && python3 main.py\""
   },
   "devDependencies": {
