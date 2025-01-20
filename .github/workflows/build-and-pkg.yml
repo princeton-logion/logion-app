@@ -27,13 +27,11 @@ jobs:
         run: |
           pip install -r requirements.txt || true
           pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
-
       - name: Install MacOS dependencies
         if: matrix.os == 'macos-latest'
         run: |
           pip install -r requirements.txt || true
           pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
-
       - name: Build executable
         run: |
           pyinstaller --onefile --paths . --add-data "urls.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py
@@ -56,7 +54,6 @@ jobs:
       - name: List files in backend/dist folder
         run: |
           ls -R ./src/backend/dist/
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -89,12 +86,3 @@ jobs:
       - name: List files in build/dist folder
         run: |
           ls -R ./src/build/dist/
-          
-      - name: Download app pkgs
-        uses: actions/download-artifact@v4
-        with:
-          path: ./${{ matrix.os }}-app
-    
-      - name: Display downloaded files
-        run: |
-          ls -R ./${{ matrix.os }}-dir

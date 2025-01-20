@@ -114,8 +114,10 @@ function startBackend() {
 async function waitForBackendReady() {
     const healthEndpoint = 'http://localhost:8000/health';
     const retryInterval = 500; // 500 ms
-    const maxRetries = 100; // Retry for 10 seconds (20 * 500ms)
+    const maxRetries = 200; // Retry for 10 seconds (20 * 500ms)
 
+    await new Promise(resolve => setTimeout(resolve, 2000)); // wait 2 seconds before checking for health
+    
     for (let i = 0; i < maxRetries; i++) {
         try {
             const response = await axios.get(healthEndpoint);
