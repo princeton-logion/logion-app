@@ -1,7 +1,10 @@
 site_name: "Logion: Machine Learning for Greek Philology"
-site_url: "https://princeton-logion.github.io/logion-app/"
+site_url: https://princeton-logion.github.io/logion-app/
+repo_url: https://github.com/princeton-logion/logion-app
+copyright: Copyright &copy; 2025 Princeton University
 theme:
   name: material
+  logo: assets/img/logo192.png
   palette:
     - scheme: default
       toggle:
@@ -11,4 +14,6 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Dark mode
+nav:
+    - 'Home': 'index.md'
 

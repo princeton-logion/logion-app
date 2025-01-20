@@ -23,18 +23,10 @@ jobs:
         python-version: 3.x
 
     - name: Download Backend Artifact
-      if: matrix.os == 'windows-latest'
       uses: actions/download-artifact@v4
       with:
-        name: windows-executables
-        path: ./src/backend/dist
-
-    - name: Download Backend Artifact
-      if: matrix.os == 'macos-latest'
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-executables
-        path: ./src/backend/dist
+        name: backend-executables
+        path: ./src/backend/dist/
 
     - name: Set up Node.js
       uses: actions/setup-node@v4

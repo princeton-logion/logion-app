@@ -1,0 +1,31 @@
+name: Deploy MkDocs Site
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install mkdocs materials
+        run: |
+          pip install mkdocs mkdocs-material
+      - name: Build mkdocs site
+        run: mkdocs build --verbose
+
+      - name: Deploy to Git page
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

@@ -39,19 +39,8 @@ jobs:
         pyinstaller --onefile --paths . --add-data "urls.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py
       working-directory: ./src/backend/
 
-    - name: Create Windows Artifact
-      if: matrix.os == 'windows-latest'
+    - name: Create Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: windows-executables
+        name: backend-executables
         path: ./src/backend/dist/
-
-    - name: Create MacOS Artifact
-      if: matrix.os == 'macos-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-executables
-        path: ./src/backend/dist/
-
-    - name: List files in dist folder
-      run: ls -R ./src/backend/dist/
