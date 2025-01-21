@@ -23,7 +23,7 @@ theme:
     - navigation.footer
 nav:
     - 'Home': 'index.md'
-    - 'How It Works': 'how.md':
+    - 'How It Works':
       - 'Word Prediction': 'how/prediction.md'
       - 'Error Detection': 'how/detection.md'
 
