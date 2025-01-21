@@ -18,8 +18,12 @@ theme:
   features:
     - navigation.tabs
     - navigation.tabs.sticky
-    - toc.follow
-    - toc.integrate
+    - navigation.tabs
+    - navigation.sections
+    - navigation.footer
 nav:
     - 'Home': 'index.md'
+    - 'How It Works': 'how.md'
+      - 'Word Prediction': 'how/prediction.md'
+      - 'Error Detection': 'how/detection.md'
 
