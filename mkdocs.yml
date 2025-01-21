@@ -5,6 +5,7 @@ copyright: Copyright &copy; 2025 Princeton University
 theme:
   name: material
   logo: assets/img/logo192.png
+  favicon: assets/img/icon.ico
   palette:
     - scheme: default
       toggle:
