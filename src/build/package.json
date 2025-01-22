@@ -53,7 +53,7 @@
         "dmg"
       ],
       "icon": "icons/icon.png"
-    }
+    },
     "nsis":{
        "oneClick": false,
        "perMachine": true,
