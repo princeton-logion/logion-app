@@ -83,6 +83,10 @@ jobs:
         with:
           name: frontend-build-mac
           path: ./src/frontend/build/
+          
+      - name: List files in frontend/build folder
+        run: |
+          ls -R ./src/frontend/build/
 
       - name: Install Dependencies
         run: |
