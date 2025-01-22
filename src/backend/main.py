@@ -180,7 +180,7 @@ Server status endpoint
 """
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "200"}
 
 
 
