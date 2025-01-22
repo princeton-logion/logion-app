@@ -30,6 +30,7 @@ function createLoadingWindow() {
     loadingWindow.on('closed', () => {
         loadingWindow = null;
     });
+
     loadingWindow.webContents.on('did-finish-load', () => {
         log.info('Loading window loaded')
     })
@@ -42,12 +43,14 @@ function createMainWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
+            preload: path.join(__dirname, 'preload.js') // Add preload script for access to node.js in renderer process
         },
     });
 
     mainWindow.loadURL(`file://${path.join(__dirname, 'frontend', 'index.html')}`);
 
     mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.send('set-axios-base-url', 'http://localhost:8000'); // Set base URL for axios in the frontend
         log.info('Main window loaded');
     });
 
@@ -111,8 +114,9 @@ function startBackend() {
 }
 
 
+// Modified waitForBackendReady to use relative path and eliminate port number
 async function waitForBackendReady() {
-    const healthEndpoint = 'http://localhost:8000/health';
+    const healthEndpoint = '/health';
     const retryInterval = 500;
     const maxRetries = 200;
 
@@ -153,19 +157,20 @@ app.on('window-all-closed', () => {
     }
 });
 
+// Updated ipcMain handlers to use relative paths
 ipcMain.handle('predict-request', async (event, requestData) => {
     try {
-        const response = await axios.post('http://localhost:8000/prediction', requestData);
-        return response.data;
+      const response = await axios.post('/prediction', requestData);
+      return response.data;
     } catch (error) {
-        log.error("Error processing predict-request:", error);
-        throw new Error(error.message); // Re-throw the error for the frontend
+      log.error("Error processing predict-request:", error);
+      throw new Error(error.message); // Re-throw the error for the frontend
     }
 });
 
 ipcMain.handle('detect-request', async (event, requestData) => {
     try {
-        const response = await axios.post('http://localhost:8000/detection', requestData);
+        const response = await axios.post('/detection', requestData);
         return response.data;
     } catch (error) {
         log.error("Error processing detect-request:", error);
