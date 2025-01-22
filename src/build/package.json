@@ -48,16 +48,16 @@
       ],
       "icon": "icons/icon.ico"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
-    }
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "icons/icon.png"
     }
+    "nsis":{
+       "oneClick": false,
+       "perMachine": true,
+       "allowToChangeInstallationDirectory": true
+     }
   }
 }
