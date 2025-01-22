@@ -54,10 +54,35 @@ jobs:
       - name: List files in backend/dist folder
         run: |
           ls -R ./src/backend/dist/
+          
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '16'
+          
+      - name: Install Dependencies Frontend
+        run: |
+          npm install
+        working-directory: ./src/frontend/
+        
+      - name: Pkg Frontend
+        run: |
+          npm run build
+        working-directory: ./src/frontend/
+        
+      - name: Create Windows Artifact Frontned
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-win
+          path: ./src/frontend/build/
+    
+      - name: Create Mac Artifact Frontend
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-mac
+          path: ./src/frontend/build/
 
       - name: Install Dependencies
         run: |
