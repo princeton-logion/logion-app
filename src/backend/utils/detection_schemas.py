@@ -2,8 +2,15 @@ from typing import List
 from pydantic import BaseModel, field_validator, Field
 
 
+
 """
-Input class
+Classes for error detection task
+"""
+
+
+
+"""
+Input Class
 """
 class DetectionRequest(BaseModel):
     text: str
@@ -13,24 +20,24 @@ class DetectionRequest(BaseModel):
     @field_validator("text")
     def text_not_empty(cls, value):
         if not value.strip():
-            raise ValueError("Input text cannot be empty.")
+            raise ValueError("Input text cannot be an empty string value.")
         return value
 
     @field_validator("model_name")
     def model_name_not_empty(cls, value):
         if not value.strip():
-            raise ValueError("User must select model.")
+            raise ValueError("No model selected. User must select model.")
         return value
     
     @field_validator("lev_distance")
     def lev_distance_not_empty(cls, value):
         if not value:
-            raise ValueError("User must select max levenshtein distance.")
+            raise ValueError("No levenshtein distance provided. User must select max levenshtein distance.")
         return value
 
 
 """
-Output Class
+Output Classes
 """
 class MaskPrediction(BaseModel):
     token: str
@@ -58,7 +65,7 @@ class WordPrediction(BaseModel):
     @field_validator("original_word")
     def original_word_not_empty(cls, value):
          if not value.strip():
-            raise ValueError("Original masked word cannot be empty string.")
+            raise ValueError("Original masked word cannot be an empty string value.")
          return value
 
     @field_validator("chance_score")
@@ -70,7 +77,7 @@ class WordPrediction(BaseModel):
     @field_validator("global_word_index")
     def global_word_index_type(cls, value):
         if not isinstance(value, int):
-            raise ValueError("Global word index must be an integer")
+            raise ValueError("Global word index must be an integer type value.")
         return value
 
 
@@ -80,7 +87,7 @@ class CCRResult(BaseModel):
     @field_validator("ccr_value")
     def ccr_score_type(cls, value):
         if not isinstance(value, (float, int)):
-             raise ValueError("CCR score must be a float or integer.")
+             raise ValueError("CCR score must be a float or integer type value.")
         return value
 
 

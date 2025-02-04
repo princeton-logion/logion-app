@@ -4,16 +4,16 @@ const { spawn } = require('child_process');
 const axios = require('axios');
 const log = require('electron-log');
 
-// Set log file location
+// set log file -- same as backend
 log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
 const logFilePath = log.transports.file.getFile().path;
 
 let backendProcess;
-let loadingWindow;
-let mainWindow;
+let loadingAPIscreen;
+let AppMainWindow;
 
-function createLoadingWindow() {
-    loadingWindow = new BrowserWindow({
+function createLoadingScreen() {
+    loadingAPIscreen = new BrowserWindow({
         width: 400,
         height: 300,
         frame: false,
@@ -25,18 +25,18 @@ function createLoadingWindow() {
         },
     });
 
-    loadingWindow.loadURL(`file://${path.join(__dirname, 'loading.html')}`);
+    loadingAPIscreen.loadURL(`file://${path.join(__dirname, 'loading.html')}`);
 
-    loadingWindow.on('closed', () => {
-        loadingWindow = null;
+    loadingAPIscreen.on('closed', () => {
+        loadingAPIscreen = null;
     });
-    loadingWindow.webContents.on('did-finish-load', () => {
+    loadingAPIscreen.webContents.on('did-finish-load', () => {
         log.info('Loading window loaded')
     })
 }
 
 function createMainWindow() {
-    mainWindow = new BrowserWindow({
+    AppMainWindow = new BrowserWindow({
         width: 1000,
         height: 650,
         webPreferences: {
@@ -45,104 +45,115 @@ function createMainWindow() {
         },
     });
 
-    mainWindow.loadURL(`file://${path.join(__dirname, 'frontend', 'index.html')}`);
+    AppMainWindow.loadURL(`file://${path.join(__dirname, 'frontend', 'index.html')}`);
 
-    mainWindow.webContents.on('did-finish-load', () => {
-        log.info('Main window loaded');
+    AppMainWindow.webContents.on('did-finish-load', () => {
+        log.info('Main window loaded.');
     });
 
-    mainWindow.on('closed', () => {
+    AppMainWindow.on('closed', () => {
         if (backendProcess) {
             backendProcess.kill();
-            log.info('Backend process killed');
+            log.info('Killed backend API process.');
         }
-        mainWindow = null;
+        AppMainWindow = null;
     });
 }
 
 function startBackend() {
     let backendPath;
 
-    // Determine the platform and set the backend path
-    if (process.platform === 'win32') {
-        backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // Windows executable
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    if (isDevelopment) {
+        backendPath = '/Users/jm9095/logion-app/src/backend/dist';
+        if (process.platform === 'win32') {
+            backendPath += '.exe';
+        }
+        log.info("Running in developer mode.");
+    } else if (process.platform === 'win32') {
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // Win exec
+        log.info("Running production application on Windows.");
     } else if (process.platform === 'darwin') {
-        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // macOS executable
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // macOS exec
+        log.info("Running production application on macOS.");
     } else if (process.platform === 'linux') {
-        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // Linux executable
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // linx exec
+        log.info("Running production application on Linux.");
     } else {
-        log.error('Unsupported platform');
+        log.error('Unsupported platform. Use one of these supported platforms: Windows, macOS, Linux.');
         app.quit();
         return;
     }
 
     log.info('Resources Path:', process.resourcesPath);
-    log.info('Backend Path:', backendPath);
+    log.info('Backend API Path:', backendPath);
 
     try {
         backendProcess = spawn(backendPath, [], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, LOGION_LOG_PATH: logFilePath }, // Add LOGION_LOG_PATH
+            env: { ...process.env, LOGION_LOG_PATH: logFilePath }, // add LOGION_LOG_PATH
         });
-        log.info('Backend process started');
+        log.info('Backend API started.');
     } catch (err) {
-        log.error(`Failed to start backend: ${err.message}`);
+        log.error(`Failed to start API server: ${err.message}`);
     }
 
     backendProcess.on('spawn', () => {
-        log.info('Backend Process has spawned');
+        log.info('Backend API has spawned.');
     });
 
     backendProcess.on('error', (err) => {
-        log.error(`Failed to start backend: ${err}`);
+        log.error(`Failed to start API server: ${err}`);
     });
 
     backendProcess.stdout.on('data', (data) => {
-        log.info(`Backend STDOUT: ${data}`);
+        log.info(`API STDOUT: ${data}`);
     });
 
     backendProcess.stderr.on('data', (data) => {
-        log.error(`Backend STDERR: ${data}`);
+        log.error(`API STDERR: ${data}`);
     });
 
     backendProcess.on('close', (code) => {
-        log.info(`Backend process exited with code ${code}`);
+        log.info(`Exited API with code ${code}`);
     });
 }
 
 
-async function waitForBackendReady() {
+// 
+async function wait4ServerReady() {
     const healthEndpoint = 'http://127.0.0.1:8000/health';
     const retryInterval = 500; // 500 ms
-    const maxRetries = 100; // Retry for 10 seconds (20 * 500ms)
+    const maxRetries = 100; // retry for 10 seconds (20 * 500ms)
 
     for (let i = 0; i < maxRetries; i++) {
         try {
             const response = await axios.get(healthEndpoint);
             if (response.status === 200) {
-                log.info('Backend is ready');
+                log.info('API server ready.');
                 return true;
             }
         } catch (error) {
-            log.info('Waiting for backend to be ready...');
+            log.info('Waiting for API server...');
         }
         await new Promise(resolve => setTimeout(resolve, retryInterval));
     }
-    log.error('Backend failed to start within the timeout period');
+    log.error('API server failed to start within the timeout period.');
     return false;
 }
 
 app.whenReady().then(async () => {
-    createLoadingWindow(); // Show the loading screen
-    startBackend(); // Start the backend
+    createLoadingScreen(); // show loading screen on startup
+    startBackend(); // start backend on startup
 
-    const isBackendReady = await waitForBackendReady();
+    const isBackendReady = await wait4ServerReady();
 
     if (isBackendReady) {
-        loadingWindow.close(); // Close the loading screen
-        createMainWindow(); // Open the main application window
+        loadingAPIscreen.close(); // close loading screen when server is ready 
+        createMainWindow(); // then open main window
     } else {
-        log.error('Backend did not start. Exiting application.');
+        log.error('API server failed to start. Exiting application.');
         app.quit();
     }
 });
@@ -158,8 +169,7 @@ ipcMain.handle('predict-request', async (event, requestData) => {
         const response = await axios.post('http://127.0.0.1:8000/prediction', requestData);
         return response.data;
     } catch (error) {
-        log.error("Error processing predict-request:", error);
-        throw new Error(error.message); // Re-throw the error for the frontend
+        log.error("Error processing predict-request IPC:", error);
     }
 });
 
@@ -168,7 +178,6 @@ ipcMain.handle('detect-request', async (event, requestData) => {
         const response = await axios.post('http://127.0.0.1:8000/detection', requestData);
         return response.data;
     } catch (error) {
-        log.error("Error processing detect-request:", error);
-        throw new Error(error.message); // Re-throw the error for the frontend
+        log.error("Error processing detect-request IPC:", error);
     }
 });

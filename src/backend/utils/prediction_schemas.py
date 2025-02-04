@@ -1,8 +1,16 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, List
 
+
+
 """
-Class for input
+Classes for lacuna prediction task
+"""
+
+
+
+"""
+Input Class
 """
 class PredictionRequest(BaseModel):
     text: str
@@ -11,24 +19,24 @@ class PredictionRequest(BaseModel):
     @field_validator("text")
     def check_mask_presence(cls, v):
         if "[MASK]" not in v:
-            raise ValueError("Input must contain one or more [MASK] tokens.")
+            raise ValueError("Input text must contain one or more [MASK] tokens.")
         return v
     
     @field_validator("text")
     def text_not_empty(cls, value):
         if not value.strip():
-            raise ValueError("Input text cannot be empty.")
+            raise ValueError("Input text cannot be an empty string value.")
         return value
 
     @field_validator("model_name")
     def model_name_not_empty(cls, value):
         if not value.strip():
-            raise ValueError("User must select model.")
+            raise ValueError("No model selected. User must select model.")
         return value
 
 
 """
-Block of classes for handling output
+Output Classes
 """
 class TokenPrediction(BaseModel):
     token: str
@@ -55,11 +63,11 @@ class PredictionResponse(BaseModel):
     @field_validator('predictions')
     def validate_predictions(cls, predictions):
         if not isinstance(predictions, dict):
-            raise ValueError("Mask predictions must be organized in a dictionary.")
+            raise ValueError("Mask token predictions must be organized as a dictionary.")
         for masked_index, pred_list in predictions.items():
             if not isinstance(masked_index, int):
-                raise ValueError("Mask index key must be an integer.")
+                raise ValueError("Dictionary key for mask index must be an integer value.")
             if not isinstance(pred_list, MaskedIndexPredictions):
-                raise ValueError("Entry associated with mask index key must be a MaskedIndexPredictions list object.")
+                raise ValueError("Value associated with mask index key must be a MaskedIndexPredictions list object.")
         return predictions
 

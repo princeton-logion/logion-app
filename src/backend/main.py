@@ -45,13 +45,13 @@ app = FastAPI(title="Logion", port=8000)
 
 
 
-# CORS middleware
+# CORS middleware for security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow requests from any origin
+    allow_origins=["*"], # allow any origin requests - temp for dev
     allow_credentials=True,
-    allow_methods=["*"],  # allow all HTTP methods
-    allow_headers=["*"],  # allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -59,17 +59,17 @@ app.add_middleware(
 
 def load_urls_from_config(config_path):
     """
-    Loads urls from config
+    Loads urls from config file
 
     Parameters:
         config_path (str) -- path to local url_config.yaml file
 
     Returns:
-
+        file -- loaded .yaml file 
     """
     try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
+        with open(config_path, "r") as file:
+            return yaml.safe_load(file)
     except FileNotFoundError:
         logging.error(f"URL config file not found at {config_path}")
         raise
@@ -85,15 +85,15 @@ else:
     urls_config = os.path.join(os.path.dirname(__file__), "urls.yaml")
 logging.info(f"URL config file path: {urls_config}")
 try:
-    with open(urls_config, "r") as f:
-        url_data = yaml.safe_load(f)
+    with open(urls_config, "r") as file:
+        url_data = yaml.safe_load(file)
         MODEL_CONFIG_URL = url_data["model_config"]
         LEV_FILTER_URL = url_data["lev_filter"]
         logging.info(f"CONFIG_URL: {MODEL_CONFIG_URL}")
         logging.info(f"LEV_FILTER_URL: {LEV_FILTER_URL}")
 except Exception as e:
     logging.error(f"Failed to load URL configuration: {e}")
-    raise SystemExit("URL configuration unavailable; exiting application.") from e
+    raise SystemExit("URL config file unavailable. Exiting application.") from e
 
 
 
@@ -105,7 +105,7 @@ def load_config_from_url(url):
         url (str) -- url to Git-hosted model_config.yaml file
 
     Returns:
-        response.text -- text from model_config.yaml
+        response.text -- url string from model_config.yaml
     """
     try:
         response = requests.get(url)
@@ -121,8 +121,8 @@ def load_config_from_url(url):
         else:
             local_path = os.path.join(os.path.dirname(__file__), 'model_config.yaml')
         logging.info(f"Attempting to load model_config.yaml from local file: {local_path}")
-        with open(local_path, 'r') as f:
-            return yaml.safe_load(f)
+        with open(local_path, 'r') as file:
+            return yaml.safe_load(file)
     except FileNotFoundError:
         logging.error(f"Local model config file not found at {local_path}")
         raise
@@ -135,7 +135,7 @@ try:
     model_config = load_config_from_url(MODEL_CONFIG_URL)
 except Exception as e:
     logging.error(f"Failed to load model configuration: {e}")
-    raise SystemExit("Model configuration unavailable; exiting application.") from e
+    raise SystemExit("Model configuration unavailable. Exiting application.") from e
 
 
 
@@ -155,7 +155,7 @@ def load_filter_from_url(url):
         file_like_object = io.BytesIO(response.content)
         return torch.tensor(np.load(file_like_object))
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to retrieve Lev filter file via URL: {e}")
+        logging.error(f"Failed to retrieve Levenshtein filter matrix from URL: {e}")
     
     # attempt local file load if URL fails
     try:
@@ -164,13 +164,13 @@ def load_filter_from_url(url):
         else:
             local_path = os.path.join(os.path.dirname(__file__), 'lev_filter.npy')
         logging.info(f"Attempting to load lev_filter.npy from local file: {local_path}")
-        with open(local_path, 'rb') as f:
-            return torch.tensor(np.load(f))
+        with open(local_path, 'rb') as file:
+            return torch.tensor(np.load(file))
     except FileNotFoundError:
-        logging.error(f"Local lev filter file not found at {local_path}")
+        logging.error(f"Local Levenshtein filter matrix not found at {local_path}")
         raise
     except Exception as e:
-        logging.error(f"Error loading local lev filter: {e}")
+        logging.error(f"Error loading local Levenshtein filter: {e}")
         raise
 
 
@@ -260,12 +260,12 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
         elif lev_distance == 3:
             lev_filter_url = LEV_FILTER_URL["lev3"]
         else:
-            raise ValueError(f"Invalid lev_distance selected: '{lev_distance}'. Available values: [1, 2, 3]")
+            raise ValueError(f"Invalid Levenshtein distance selected: '{lev_distance}'. Available values: [1, 2, 3]")
         try:
             lev_filter = load_filter_from_url(lev_filter_url)
         except Exception as e:
-            logging.error(f"Failed to load lev_filter: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to load lev_filter: {e}")
+            logging.error(f"Failed to load lev_filter matrix: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to load lev_filter matrix: {e}")
         
         # create instance of Logion class from selected model and Lev filter
         model = logion_class.Logion(model, tokenizer, lev_filter, device)
@@ -293,7 +293,7 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
         raise
     except (IndexError, ValueError) as e:
         logging.exception(f"Detection task error: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid input or prediction error: {e}") from e
+        raise HTTPException(status_code=400, detail=f"Invalid input or detection error: {e}") from e
     except Exception as e:
         logging.exception(f"Error during detection task: {e}")
         raise HTTPException(status_code=500, detail="Error during prediction.") from e

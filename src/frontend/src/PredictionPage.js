@@ -13,8 +13,8 @@ function PredictionPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
-    const [selectedOption, setSelectedOption] = useState('Base BERT');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar toggle state
+    const [selectedOption, setSelectedOption] = useState('Base BERT'); {/* Default Base BERT Selection */}
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
 
     const options = [
@@ -38,25 +38,24 @@ function PredictionPage() {
 
 
       try {
-        // Make a call to the main process via IPC. The first argument is the name of the method and the second the request body.
+        // call to main process via IPC
         const response = await ipcRenderer.invoke('predict-request', {
            text: inputText,
           model_name: selectedOption
         });
 
 
-      // Robust response validation
+      // response validation
       if (!response || !response.predictions) {
         throw new Error("Unexpected response format from the server: Missing predictions.");
       }
 
-      //Directly use the structured data from the response
         setPredictions(response.predictions);
         setSuccess('Εὖγε!<br/>Predictions generated.');
       } catch (err) {
       setPredictions([]);
         setError(err.message);
-      console.error("Error submitting the form:", err);
+      console.error("Error submitting text:", err);
     } finally {
       setIsLoading(false);
       }
@@ -74,6 +73,7 @@ function PredictionPage() {
       {/* Content Overlay */}
       {isSidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
 
+      {/* Page Contents */}
       <div className={`main-content ${isSidebarOpen ? 'shifted' : ''}`}>
         <div className='container mt-5'>
         <div className="d-flex align-items-center mb-4">
@@ -99,7 +99,7 @@ function PredictionPage() {
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
             <textarea
-          className={textareaClasses} //Using the new variable
+          className={textareaClasses}
           rows="4"
           style={{ fontSize: '14px', height: '300px' }}
           value={inputText}
@@ -108,7 +108,7 @@ function PredictionPage() {
         />
             </div>
             <div>
-        <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Predict</button> {/*Using buttonClass*/}
+        <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Predict</button>
       </div>
           </form>
           {isLoading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Loading...</p>}
@@ -116,7 +116,7 @@ function PredictionPage() {
           {success && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: success }}></p>}
         </div>
         <div className="col-md-4">
-          {predictions && Object.entries(predictions).length > 0 && ( //Check for null or empty object
+          {predictions && Object.entries(predictions).length > 0 && ( // check for null object
             <div className="mt-1">
               {Object.entries(predictions).map(([maskedIndex, prediction]) => (
                 <div key={maskedIndex}>

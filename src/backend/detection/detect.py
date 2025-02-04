@@ -53,13 +53,13 @@ def detection_function(text: str, model: logion_class.Logion, tokenizer, device,
             chunk_end -= 1
             chunk_tokens = tokens_full[chunk_start:chunk_end]
         if chunk_end == chunk_start:
-            # if period not found, start new chunk
+            # if no ".", start new chunk
             chunk_end = min(chunk_start + chunk_size, num_tokens_full)
             chunk_tokens = tokens_full[chunk_start:chunk_end]
             
         token_ids = torch.tensor([start_token] + chunk_tokens + [end_token]).unsqueeze(0).to(device)
 
-        # compute chance score of all tokens
+        # compute chance score for each token
         scores = model.get_chance_scores(token_ids)[1:-1]
 
         # convert token IDs to words
@@ -127,7 +127,7 @@ def detection_function(text: str, model: logion_class.Logion, tokenizer, device,
         
         final_predictions.update(chunk_predictions)
         ccr.extend(chunk_ccr)
-        # set new chunk start for next loop
+        # set new chunk start at end of current chunk for next loop
         chunk_start = chunk_end
 
     logging.info(f"Final Predictions: {final_predictions}")

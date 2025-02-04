@@ -6,7 +6,7 @@ import numpy as np
 
 def prediction_function(text: str, model: str, tokenizer: str, device, window_size: int=512, overlap: int=128, num_predictions: int=5):
     """
-    Masked language modeling inference using sliding window
+    Masked language modeling inference for lacuna predictions using sliding window
     
     Parameters:
         text (str) -- input text
@@ -31,7 +31,7 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
     tokens = tokenizer.encode(text, add_special_tokens=False)
     num_tokens = len(tokens)
 
-    # overlapping window loop for text beyond 512 tokens
+    # overlapping window loop to process text beyond 512 tokens
     for i in range(0, num_tokens, window_size - overlap):
         chunk_ids = tokens[i:min(i + window_size, num_tokens)]
         chunk_ids = chunk_ids[:512]
@@ -83,11 +83,13 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
 
           whole_word_predictions.append((base_word, max_prob))
 
-        # sort by prob, keep top num_predictions
+        # sort by prob
         sorted_predictions = sorted(whole_word_predictions, key=lambda x: x[1], reverse=True)
+        # keep top num_predictions
         final_predictions[masked_index] = sorted_predictions[:num_predictions]
 
 
     logging.info(type(final_predictions))
     logging.info(f"Final predictions: {final_predictions}")
+    
     return final_predictions
