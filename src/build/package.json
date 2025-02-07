@@ -23,7 +23,7 @@
     "appId": "edu.princeton.logion",
     "productName": "Logion",
     "buildVersion": "0.0.0",
-    "copyright": "Copyright (c) 2025 Jacob Murel and The Trustees of Princeton University"
+    "copyright": "Copyright (c) 2025 Jacob Murel and The Trustees of Princeton University",
     "files": [
       "main.js",
       "loading.html",
