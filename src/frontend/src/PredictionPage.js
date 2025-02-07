@@ -13,7 +13,7 @@ function PredictionPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
-    const [selectedOption, setSelectedOption] = useState('Base BERT'); /* Default Base BERT Selection */
+    const [selectedOption, setSelectedOption] = useState('Base BERT');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
 

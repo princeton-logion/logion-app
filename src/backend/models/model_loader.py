@@ -49,7 +49,7 @@ def load_device(model: torch.nn.Module):
         logging.info(f"CUDA version: {torch.version.cuda}")
         device = torch.device("cuda:0")
     elif platform.system() == "Darwin" and torch.backends.mps.is_available():
-         logging.info("MPS (Metal) is available")
+         logging.info("MPS Metal available")
          device = torch.device("mps")
     else:
         device = torch.device("cpu")
