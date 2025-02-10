@@ -23,6 +23,7 @@ theme:
     - navigation.footer
 nav:
     - 'Home': 'index.md'
+    - 'About Hardware': 'hardware.md'
     - 'How It Works':
       - 'Word Prediction': 'how/prediction.md'
       - 'Error Detection': 'how/detection.md'
