@@ -111,7 +111,7 @@
 
 .sidebar-header {
   display: flex;
-  padding: .5rem; /* (Originally '1rem' only) 1rem .5rem 1rem .5rem */
+  padding: .5rem;
   color: white;
   font-size: 1.2rem;
   margin-bottom: 15px;
@@ -191,7 +191,7 @@
 }
 
 
-/* Content Overlay */
+/* Content Overlay per Sidebar */
 .content-overlay {
   position: fixed;
   top: 0;
@@ -202,7 +202,7 @@
   z-index: 1049;
 }
 
-/* Main Content Shift */
+/* Main Content Shift per Overlay */
 .main-content {
   transition: margin-left 0.3s;
   position: relative;
@@ -226,8 +226,7 @@
 }
 .text-highlight-container {
     position: relative;
-    margin-top: 50px; 
-    /* width: calc(100% - 40px); */
+    margin-top: 50px;
     padding: 10px;
     background-color: #f9f9f9;
     border: 1px solid #ddd;
@@ -239,7 +238,7 @@
   overflow-y: auto;
   top: 20px
 }
-/* Detection Page Popover */
+/* Error Detection Page Popover */
 .popup {
     position: absolute;
     background-color: white;
@@ -280,11 +279,11 @@
     justify-content: center;
     width: 1.2em;
     height: 1.2em;
-    color: invert;        /* Light green for the question mark */
-    border: 1px solid black;       /* Slightly darker green for the border */
+    color: invert;
+    border: 1px solid black;
     border-radius: 50%;
-    font-size: 0.8em; /* Size of icon*/
-    position: relative; /* required for vertical align adjustment */
+    font-size: 0.8em;
+    position: relative;
   }
   
   .question-mark-icon > i {

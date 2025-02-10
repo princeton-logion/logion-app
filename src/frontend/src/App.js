@@ -8,17 +8,17 @@ import Sidebar from './Sidebar';
 
 function App() {
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    setSidebarOpen(!isSidebarOpen);
   };
 
   return (
     <Router>
       <div className="App">
         <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-        <div className={`main-content ${isSidebarOpen ? 'shifted' : ''}`}> {/*Main content container*/}
+        <div className={`main-content ${isSidebarOpen ? 'shifted' : ''}`}>
           <Routes>
             <Route path="/" element={<MainPage />} />
             <Route path="/prediction" element={<PredictionPage />} />

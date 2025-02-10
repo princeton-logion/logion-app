@@ -14,16 +14,14 @@ function PredictionPage() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [selectedOption, setSelectedOption] = useState('Base BERT');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
 
 
     const options = [
-    'Base BERT',
-    'Base ELECTRA',
-  ];
+    'Base BERT'];
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    setSidebarOpen(!isSidebarOpen);
   };
 
   const handleOptionChange = (e) => {
@@ -47,7 +45,7 @@ function PredictionPage() {
 
       // response validation
       if (!response || !response.predictions) {
-        throw new Error("Unexpected response format from the server: Missing predictions.");
+        throw new Error("Unexpected server response: Missing predictions.");
       }
 
         setPredictions(response.predictions);

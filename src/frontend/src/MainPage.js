@@ -6,7 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 function MainPage() {
 
 
-  const [isTyping, setIsTyping] = useState(true);
+  const [isTyping, setTyping] = useState(true);
   const [displayedTitle, setDisplayedTitle] = useState("");
   const fullTitle = "λόγιον";
     const typewriter = () => {
@@ -18,7 +18,7 @@ function MainPage() {
 
         } else {
           clearInterval(intervalId);
-          setIsTyping(false);
+          setTyping(false);
         }
       }, 100);
     };

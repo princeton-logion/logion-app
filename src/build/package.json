@@ -57,7 +57,7 @@
       "icon": "icons/icon.png",
       "hardenedRuntime": true,
   	  "gatekeeperAssess": false,
-  	  "entitlements": "build/mac/entitlements.plist"
+  	  "entitlements": "build/entitlements.plist"
     },
     "nsis":{
        "oneClick": false,

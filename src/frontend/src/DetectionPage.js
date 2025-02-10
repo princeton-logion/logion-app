@@ -15,9 +15,9 @@ function DetectionPage() {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [selectedOption, setSelectedOption] = useState('Base BERT');
-    const [selectedLevDistance, setSelectedLevDistance] = useState(1); // Default to 1
+    const [selectedLevDistance, setSelectedLevDistance] = useState(1);
     const [activePopoverWord, setActivePopoverWord] = useState(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
     const popoverRef = useRef(null);
     const wordRef = useRef(null);
 
@@ -26,10 +26,10 @@ function DetectionPage() {
         'Base ELECTRA',
     ];
 
-    const levDistanceOptions = [1, 2, 3]; // Available Lev Distance values
+    const levDistanceOptions = [1, 2, 3];
 
     const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
+        setSidebarOpen(!isSidebarOpen);
     };
 
     const handleOptionChange = (e) => {
@@ -37,22 +37,22 @@ function DetectionPage() {
     };
 
     const handleLevDistanceChange = (e) => {
-       setSelectedLevDistance(parseInt(e.target.value, 10)); // Ensure it's a number
+       setSelectedLevDistance(parseInt(e.target.value, 10)); // confirm Lev is number
     };
 
     const getColor = (score) => {
-        // Use log scale for better visual contrast
+        // log scale for better optics
         const logScore = Math.log10(score);
         const normalizedScore = Math.max(0, Math.min(1, (logScore + 4) / 4));
 
-        // Normalize and clip the score for the HSL range
+        // nomaralize + clip score for HSL
         const hue = (120 * normalizedScore).toFixed(0);
         return `hsl(${hue}, 100%, 50%)`;
     };
 
     const handleWordClick = (word) => {
     if (activePopoverWord?.word === word.word) {
-        // Clicking the same word again closes the popover
+        // click same word to close popover
         setActivePopoverWord(null);
     } else {
         setActivePopoverWord(word);
@@ -77,7 +77,7 @@ function DetectionPage() {
     const renderTextWithHighlights = () => {
         if (!predictions || predictions.length === 0 || !ccrValues || ccrValues.length === 0) return null;
     
-    // Zip predictions and ccr values to associate the correct values
+    // zip preds and ccrs to associate correct values
         const textElements = predictions.map((wordPrediction, index) => {
         const { original_word, suggestions } = wordPrediction;
         const ccr = ccrValues[index]?.ccr_value;
@@ -100,7 +100,7 @@ function DetectionPage() {
             <div className="text-highlight-container col-md-7">
             {textElements}
             </div>
-            {/* Table to display suggestions */}
+            {/* table for suggestions */}
             {activePopoverWord && activePopoverWord.suggestions && (
             <div className="col-md-4">
                 <h5>Suggestions for: {activePopoverWord.word}</h5>
@@ -150,16 +150,16 @@ function DetectionPage() {
        setSuccess(null);
 
        try {
-           // Make a call to the main process via IPC
+           // call to main process via IPC
            const response = await ipcRenderer.invoke('detect-request', {
                text: inputText,
                model_name: selectedOption,
                lev_distance: selectedLevDistance,
            });
 
-            // Robust response validation
+            // response validation
             if (!response || !response.predictions || !response.ccr) {
-              throw new Error("Unexpected response format from the server: Missing predictions or CCR values.");
+              throw new Error("Unexpected server response: Missing predictions or CCR scores.");
             }
 
             setPredictions(response.predictions);
@@ -169,7 +169,7 @@ function DetectionPage() {
             setPredictions([]);
             setCcrValues([]);
             setError(err.message);
-            console.error("Error submitting the form:", err);
+            console.error("Error submitting form:", err);
         } finally {
             setIsLoading(false);
         }
