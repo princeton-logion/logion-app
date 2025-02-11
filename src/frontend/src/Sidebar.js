@@ -33,4 +33,5 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
   );
 }
 
+
 export default Sidebar;

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
-import Sidebar from './Sidebar';
 import { OverlayTrigger, Popover } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
+import './App.css';
+import Sidebar from './Sidebar';
 
 const { ipcRenderer } = window.require('electron');
 
@@ -11,7 +11,7 @@ function DetectionPage() {
     const [inputText, setInputText] = useState('');
     const [predictions, setPredictions] = useState([]);
     const [ccrValues, setCcrValues] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [selectedOption, setSelectedOption] = useState('Base BERT');
@@ -145,7 +145,7 @@ function DetectionPage() {
 
    const handleSubmit = async (e) => {
        e.preventDefault();
-       setIsLoading(true);
+       setLoading(true);
        setError(null);
        setSuccess(null);
 
@@ -171,7 +171,7 @@ function DetectionPage() {
             setError(err.message);
             console.error("Error submitting form:", err);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
