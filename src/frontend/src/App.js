@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import Sidebar from './Sidebar';
 import MainPage from './MainPage';
 import PredictionPage from './PredictionPage';
 import DetectionPage from './DetectionPage';
+import Sidebar from './Sidebar';
 
 
 function App() {

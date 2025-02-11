@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { OverlayTrigger, Popover } from 'react-bootstrap';
-const { ipcRenderer } = window.require('electron');
-import '@fortawesome/fontawesome-free/css/all.css';
 import './App.css';
 import Sidebar from './Sidebar';
+import { OverlayTrigger, Popover } from 'react-bootstrap';
+import '@fortawesome/fontawesome-free/css/all.css';
+const { ipcRenderer } = window.require('electron');
 
 
 function PredictionPage() {
     const [inputText, setInputText] = useState('');
     const [predictions, setPredictions] = useState([]);
-    const [isLoading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [selectedOption, setSelectedOption] = useState('Base BERT');
@@ -30,7 +30,7 @@ function PredictionPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     setSuccess(null);
 
@@ -55,7 +55,7 @@ function PredictionPage() {
         setError(err.message);
       console.error("Error submitting text:", err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       }
     };
 
