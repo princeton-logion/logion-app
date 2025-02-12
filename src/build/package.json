@@ -57,9 +57,7 @@
       "hardenedRuntime": true,
   	  "gatekeeperAssess": false,
   	  "entitlements": "build/entitlements.plist",
-  	  "entitlementsInherit": "build/entitlements.plist",
-  	  "sign": true,
-      "identity": "Developer ID Application: Princeton (TEAM_ID)"
+  	  "entitlementsInherit": "build/entitlements.plist"
     },
     "nsis":{
        "oneClick": false,
