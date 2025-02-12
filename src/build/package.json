@@ -20,7 +20,6 @@
     "electron-log": "^5.2.4"
   },
   "build": {
-    "appId": "edu.princeton.logion",
     "productName": "Logion",
     "buildVersion": "0.0.0",
     "copyright": "Copyright (c) 2025 Jacob Murel and The Trustees of Princeton University",
@@ -57,7 +56,10 @@
       "icon": "icons/icon.png",
       "hardenedRuntime": true,
   	  "gatekeeperAssess": false,
-  	  "entitlements": "build/entitlements.plist"
+  	  "entitlements": "build/entitlements.plist",
+  	  "entitlementsInherit": "build/entitlements.plist",
+  	  "sign": true,
+      "identity": "Developer ID Application: Princeton (TEAM_ID)"
     },
     "nsis":{
        "oneClick": false,
