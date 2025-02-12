@@ -20,6 +20,7 @@
     "electron-log": "^5.2.4"
   },
   "build": {
+    "appId": "edu.princeton.logion",
     "productName": "Logion",
     "buildVersion": "0.0.0",
     "copyright": "Copyright (c) 2025 Jacob Murel and The Trustees of Princeton University",
