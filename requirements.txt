@@ -1,0 +1,12 @@
+fastapi
+nox
+npx
+numpy
+polyleven
+pydantic
+pyinstaller
+PyYAML
+pytest
+Requests
+transformers
+uvicorn

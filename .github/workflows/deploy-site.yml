@@ -1,0 +1,27 @@
+name: Deploy mkDocs Site
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Start Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install mkdocs-material
+        run: |
+          pip install mkdocs-material
+
+      - name: Deploy docs to Git pages
+        run: |
+          mkdocs gh-deploy --force --no-history
