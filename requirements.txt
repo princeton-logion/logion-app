@@ -1,4 +1,5 @@
 fastapi
+mypy
 nox
 npx
 numpy
@@ -8,5 +9,6 @@ pyinstaller
 PyYAML
 pytest
 Requests
+torch
 transformers
 uvicorn

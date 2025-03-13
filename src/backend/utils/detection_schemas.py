@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Annotated
 from pydantic import BaseModel, field_validator, Field
 
 
@@ -18,21 +18,21 @@ class DetectionRequest(BaseModel):
     lev_distance: int
 
     @field_validator("text")
-    def text_not_empty(cls, value):
+    def text_not_null(cls, value):
         if not value.strip():
-            raise ValueError("Input text cannot be an empty string value.")
+            raise ValueError("Input text cannot be an empty string.")
         return value
 
     @field_validator("model_name")
-    def model_name_not_empty(cls, value):
+    def model_not_null(cls, value):
         if not value.strip():
             raise ValueError("No model selected. User must select model.")
         return value
     
     @field_validator("lev_distance")
-    def lev_distance_not_empty(cls, value):
+    def lev_dist_not_null(cls, value):
         if not value:
-            raise ValueError("No levenshtein distance provided. User must select max levenshtein distance.")
+            raise ValueError("No levenshtein distance selected. User must select levenshtein distance.")
         return value
 
 
@@ -44,7 +44,7 @@ class MaskPrediction(BaseModel):
     probability: float
 
     @field_validator("token")
-    def token_not_empty(cls, value):
+    def pred_token_not_null(cls, value):
         if not value.strip():
             raise ValueError("Predicted token cannot be an empty string value.")
         return value
@@ -60,12 +60,12 @@ class WordPrediction(BaseModel):
     original_word: str
     chance_score: float
     global_word_index: int
-    suggestions: List[MaskPrediction] = Field(..., min_items=1)
+    suggestions: Annotated[List[MaskPrediction], Field(min_items=1)]
 
     @field_validator("original_word")
-    def original_word_not_empty(cls, value):
+    def original_word_not_null(cls, value):
          if not value.strip():
-            raise ValueError("Original masked word cannot be an empty string value.")
+            raise ValueError("Original masked word cannot be an empty string.")
          return value
 
     @field_validator("chance_score")
@@ -77,7 +77,7 @@ class WordPrediction(BaseModel):
     @field_validator("global_word_index")
     def global_word_index_type(cls, value):
         if not isinstance(value, int):
-            raise ValueError("Global word index must be an integer type value.")
+            raise ValueError("Global word index must be an integer.")
         return value
 
 
@@ -87,7 +87,7 @@ class CCRResult(BaseModel):
     @field_validator("ccr_value")
     def ccr_score_type(cls, value):
         if not isinstance(value, (float, int)):
-             raise ValueError("CCR score must be a float or integer type value.")
+             raise ValueError("CCR score must be a float or integer.")
         return value
 
 
@@ -96,13 +96,13 @@ class DetectionResponse(BaseModel):
     ccr: List[CCRResult]
     
     @field_validator("predictions")
-    def predictions_not_empty(cls, value):
+    def predictions_not_null(cls, value):
         if not value:
             raise ValueError("Predictions list cannot be empty.")
         return value
 
     @field_validator("ccr")
-    def ccr_not_empty(cls, value):
+    def ccr_not_null(cls, value):
          if not value:
              raise ValueError("CCR list cannot be empty.")
          return value

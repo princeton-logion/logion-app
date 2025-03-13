@@ -3,12 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
-function Sidebar({ isSidebarOpen, toggleSidebar }) {
+function Sidebar({ sidebarOpen, toggleSidebar }) {
   const location = useLocation();
 
 
   return (
-    <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`} role='navigation'>
+    <div className={`sidebar ${sidebarOpen ? 'open' : ''}`} role='navigation'>
       <div className="sidebar-header">
       <Link className="sidebar-header-content" to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
         <img src="logo192.png" className="sidebar-logo" alt="logo" />

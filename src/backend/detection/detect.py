@@ -67,7 +67,7 @@ def detection_function(text: str, model: logion_class.Logion, tokenizer, device,
         logging.info(f"Tokens: {tokens_decode}")
         logging.info(f"Number of tokens: {len(tokens_decode)}")
 
-        word_scores = []
+        word_scores: list = []
         for i in range(len(tokens_decode)):
           if tokens_decode[i].startswith('##'): 
             if scores[i] < word_scores[-1]:

@@ -15,6 +15,7 @@ from detection import logion_class, detect
 import random
 import include
 import uvicorn
+import regex as re
 
 
 
@@ -36,7 +37,7 @@ log_file_path = os.environ.get("LOGION_LOG_PATH", "logion-app.log")
 logging.basicConfig(filename=log_file_path,
                     level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s')
-logging.info(f"API logging configured at: {log_file_path}")
+logging.info(f"Path to log: {log_file_path}")
 
 
 
@@ -57,85 +58,50 @@ app.add_middleware(
 
 
 
-def load_urls_from_config(config_path):
-    """
-    Loads urls from config file
-
-    Parameters:
-        config_path (str) -- path to local url_config.yaml file
-
-    Returns:
-        file -- loaded .yaml file 
-    """
-    try:
-        with open(config_path, "r") as file:
-            return yaml.safe_load(file)
-    except FileNotFoundError:
-        logging.error(f"URL config file not found at {config_path}")
-        raise
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing URL config file: {e}")
-        raise
-
-# load the config file
-logging.info(f"Current working dir: {os.getcwd()}")
-if hasattr(sys, '_MEIPASS'):
-    urls_config = os.path.join(sys._MEIPASS, "urls.yaml")
-else:
-    urls_config = os.path.join(os.path.dirname(__file__), "urls.yaml")
-logging.info(f"URL config file path: {urls_config}")
-try:
-    with open(urls_config, "r") as file:
-        url_data = yaml.safe_load(file)
-        MODEL_CONFIG_URL = url_data["model_config"]
-        LEV_FILTER_URL = url_data["lev_filter"]
-        logging.info(f"CONFIG_URL: {MODEL_CONFIG_URL}")
-        logging.info(f"LEV_FILTER_URL: {LEV_FILTER_URL}")
-except Exception as e:
-    logging.error(f"Failed to load URL configuration: {e}")
-    raise SystemExit("URL config file unavailable. Exiting application.") from e
-
-
-
 def load_config_from_url(url):
     """
     Loads model config file file from url
 
     Parameters:
-        url (str) -- url to Git-hosted model_config.yaml file
+        url (str) -- url to Git-hosted resources_config.yaml file
 
     Returns:
-        response.text -- url string from model_config.yaml
+        response.text -- url string from resources_config.yaml
     """
     try:
         response = requests.get(url)
         response.raise_for_status()
         return yaml.safe_load(response.text)
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to retrieve model config file via URL: {e}")
-    
-    # attempt local file load if URL fails
+        logging.error(f"Unable to load remote resources_config.yaml: {e}")
+    # if URL fails, load local file
     try:
         if hasattr(sys, '_MEIPASS'):
-            local_path = os.path.join(sys._MEIPASS, 'model_config.yaml')
+            local_path = os.path.join(sys._MEIPASS, 'resources_config.yaml')
         else:
-            local_path = os.path.join(os.path.dirname(__file__), 'model_config.yaml')
-        logging.info(f"Attempting to load model_config.yaml from local file: {local_path}")
+            local_path = os.path.join(os.path.dirname(__file__), 'resources_config.yaml')
         with open(local_path, 'r') as file:
             return yaml.safe_load(file)
-    except FileNotFoundError:
-        logging.error(f"Local model config file not found at {local_path}")
-        raise
     except yaml.YAMLError as e:
-        logging.error(f"Error parsing local model config file: {e}")
+        logging.error(f"Unable to load local resources_config.yaml: {e}")
         raise
-        
 
+
+# load resources_config.yaml
+logging.info(f"CWD: {os.getcwd()}")
+if hasattr(sys, '_MEIPASS'):
+    config_path = os.path.join(sys._MEIPASS, "resources_config.yaml")
+else:
+    config_path = os.path.join(os.path.dirname(__file__), "resources_config.yaml")
+logging.info(f"Config file path: {config_path}")
 try:
-    model_config = load_config_from_url(MODEL_CONFIG_URL)
+    with open(config_path, "r") as file:
+        config_data = yaml.safe_load(file)
+        MODEL_CONFIG = config_data["models"]
+        LEV_FILTER_URLS = config_data["lev_filter"]
 except Exception as e:
-    logging.error(f"Failed to load model configuration: {e}")
-    raise SystemExit("Model configuration unavailable. Exiting application.") from e
+    logging.error(f"Unable to load resources_config.yaml: {e}")
+    raise SystemExit("Quitting application.") from e
 
 
 
@@ -152,26 +118,24 @@ def load_filter_from_url(url):
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
-        file_like_object = io.BytesIO(response.content)
-        return torch.tensor(np.load(file_like_object))
+        lev_matrix_file = io.BytesIO(response.content)
+        return torch.tensor(np.load(lev_matrix_file))
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to retrieve Levenshtein filter matrix from URL: {e}")
+        logging.error(f"Unable to load remote Lev filter matrix: {e}")
     
-    # attempt local file load if URL fails
+    # if URL fails, load local file
     try:
         if hasattr(sys, '_MEIPASS'):
             local_path = os.path.join(sys._MEIPASS, 'lev_filter.npy')
         else:
             local_path = os.path.join(os.path.dirname(__file__), 'lev_filter.npy')
-        logging.info(f"Attempting to load lev_filter.npy from local file: {local_path}")
         with open(local_path, 'rb') as file:
             return torch.tensor(np.load(file))
-    except FileNotFoundError:
-        logging.error(f"Local Levenshtein filter matrix not found at {local_path}")
-        raise
     except Exception as e:
-        logging.error(f"Error loading local Levenshtein filter: {e}")
+        logging.error(f"Unable to load local Lev filter matrix: {e}")
         raise
+
+
 
 
 
@@ -191,10 +155,8 @@ Token prediction task
 async def prediction_endpoint(request: prediction_schemas.PredictionRequest):
     try:
         # receive model name from front-end and retrieve via model_config file
-        frontend_option = request.model_name
-        model_info = next((m for m in model_config["models"] if m["name"] == frontend_option), None)
-        if not model_info:
-            raise ValueError(f"Invalid model selected: '{frontend_option}'. Available models: {[m['name'] for m in model_config['models']]}")
+        frontend_selection = request.model_name
+        model_info = next((m for m in MODEL_CONFIG if m["name"] == frontend_selection), None)
         model_name = model_info["repo"]
         model_type = model_info["type"]
 
@@ -203,11 +165,11 @@ async def prediction_endpoint(request: prediction_schemas.PredictionRequest):
             model, tokenizer = model_loader.load_encoder(model_name, model_type)
             device, model = model_loader.load_device(model)
         except Exception as e:
-            logging.exception(f"Error loading model {model_name}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error loading model {model_name}: {e}") from e
+            raise HTTPException(status_code=500, detail="Unable to load model.") from e
         
-        # receive input text from front-end and pass to prediction function
+        # receive input text from front-end, pass to prediction function
         text = request.text
+        text = re.sub(r'\?', '[MASK]', text)
         results = predict.prediction_function(text, model, tokenizer, device, window_size=512, overlap=128, num_predictions=5)
         
         # format results for response class
@@ -221,11 +183,11 @@ async def prediction_endpoint(request: prediction_schemas.PredictionRequest):
     except HTTPException as e:
         raise
     except (IndexError, ValueError) as e:
-        logging.exception(f"Prediction task error: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid input or prediction error: {e}") from e
+        logging.exception(f"Invalid input: {e}")
+        raise HTTPException(status_code=400, detail="Invalid input.") from e
     except Exception as e:
-        logging.exception(f"Error during prediction task: {e}")
-        raise HTTPException(status_code=500, detail="Error during prediction.") from e
+        logging.exception(f"Prediction task error: {e}")
+        raise HTTPException(status_code=500) from e
 
 
 
@@ -235,42 +197,32 @@ Error detection task
 @app.post("/detection", response_model=detection_schemas.DetectionResponse)
 async def detection_endpoint(request: detection_schemas.DetectionRequest):
     try:
-        # receive model name from front-end and retrieve via model_config file
-        frontend_option = request.model_name
-        model_info = next((m for m in model_config["models"] if m["name"] == frontend_option), None)
-        if not model_info:
-            raise ValueError(f"Invalid model selected: '{frontend_option}'. Available models: {[m['name'] for m in model_config['models']]}")
+        # receive model name from front-end, retrieve via model_config file
+        frontend_selection = request.model_name
+        model_info = next((m for m in MODEL_CONFIG if m["name"] == frontend_selection), None)
         model_name = model_info["repo"]
         model_type = model_info["type"]
         lev_distance = request.lev_distance
 
-        # load model from HF Hub and to device
+        # load HF model to device
         try:
             model, tokenizer = model_loader.load_encoder(model_name, model_type)
             device, model = model_loader.load_device(model)
         except Exception as e:
-            logging.exception(f"Error loading model {model_name}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error loading model {model_name}: {e}") from e
+            raise HTTPException(status_code=500, detail="Unable to load model.") from e
         
-        # load Lev filter via HF URL per selected lev_distance
-        if lev_distance == 1:
-            lev_filter_url = LEV_FILTER_URL["lev1"]
-        elif lev_distance == 2:
-            lev_filter_url = LEV_FILTER_URL["lev2"]
-        elif lev_distance == 3:
-            lev_filter_url = LEV_FILTER_URL["lev3"]
-        else:
-            raise ValueError(f"Invalid Levenshtein distance selected: '{lev_distance}'. Available values: [1, 2, 3]")
+        # load HF Lev filter per selected lev_distance
+        lev_filter_url = LEV_FILTER_URLS.get(f"lev{lev_distance}")
+        
         try:
             lev_filter = load_filter_from_url(lev_filter_url)
         except Exception as e:
-            logging.error(f"Failed to load lev_filter matrix: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to load lev_filter matrix: {e}")
+            raise HTTPException(status_code=500, detail=f"Unable to load Levenshtein matrix.")
         
         # create instance of Logion class from selected model and Lev filter
         model = logion_class.Logion(model, tokenizer, lev_filter, device)
 
-        # receive input text from front-end and pass to detection function
+        # receive input text from front-end, pass to detection function
         text = request.text
         results, ccr = detect.detection_function(text, model, tokenizer, device)
 
@@ -279,24 +231,21 @@ async def detection_endpoint(request: detection_schemas.DetectionRequest):
         for (original_word, chance_score, global_word_index), suggestions in results.items():
             formatted_suggestions = [detection_schemas.MaskPrediction(token=sug, probability=prob) for sug, prob in suggestions]
             formatted_results.append(detection_schemas.WordPrediction(original_word=original_word, chance_score=chance_score, global_word_index=global_word_index, suggestions=formatted_suggestions))
-        logging.info(f"{detection_schemas.MaskPrediction}")
-        logging.info(f"{detection_schemas.WordPrediction}")
         # account for zero-value CCR scores
         ccr = np.nan_to_num(ccr, nan=100000, posinf=100000, neginf=100000)
         ccr_results = [detection_schemas.CCRResult(ccr_value=ccr_value) for ccr_value in ccr]
         logging.info(f"Formatted Results: {formatted_results}")
         logging.info(f"CCR Results: {ccr_results}")
-        logging.info(f"DetectionResponse: {type(detection_schemas.DetectionResponse(predictions=formatted_results, ccr=ccr_results))} {detection_schemas.DetectionResponse(predictions=formatted_results, ccr=ccr_results)}")
         return detection_schemas.DetectionResponse(predictions=formatted_results, ccr=ccr_results)
 
     except HTTPException as e:
         raise
     except (IndexError, ValueError) as e:
-        logging.exception(f"Detection task error: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid input or detection error: {e}") from e
+        logging.exception(f"Invalid input: {e}")
+        raise HTTPException(status_code=400, detail="Invalid input.") from e
     except Exception as e:
-        logging.exception(f"Error during detection task: {e}")
-        raise HTTPException(status_code=500, detail="Error during prediction.") from e
+        logging.exception(f"Detection task error: {e}")
+        raise HTTPException(status_code=500) from e
 
 
 

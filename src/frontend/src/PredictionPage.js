@@ -5,42 +5,44 @@ import './App.css';
 import Sidebar from './Sidebar';
 import { OverlayTrigger, Popover } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
-const isElectron = !!window.electron;
+
 
 function PredictionPage() {
     const [inputText, setInputText] = useState('');
     const [predictions, setPredictions] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
-    const [selectedOption, setSelectedOption] = useState('Base BERT');
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [successMsg, setSuccessMsg] = useState(null);
+    const [selectedModel, setSelectedModel] = useState('Base BERT');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const isElectron = !!window.electron;
 
 
-    const options = [
+    const modelOptions = [
     'Base BERT'];
 
   const toggleSidebar = () => {
-    setSidebarOpen(!isSidebarOpen);
+    setSidebarOpen(!sidebarOpen);
   };
 
-  const handleOptionChange = (e) => {
-    setSelectedOption(e.target.value);
+  const handleModelChange = (e) => {
+    setSelectedModel(e.target.value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
-
+    
+// server connection for dev vs Electron testing
 try {
     if (isElectron) {
         // Electron IPC
         const response = await window.electron.ipcRenderer.invoke('predict-request', {
             text: inputText,
-            model_name: selectedOption
+            model_name: selectedModel
         });
 
         if (!response || !response.predictions) {
@@ -48,54 +50,56 @@ try {
         }
 
         setPredictions(response.predictions);
-        setSuccess('Εὖγε!<br/>Predictions generated.');
+        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
     } else {
         // Axios for external API
         const response = await axios.post(`http://localhost:8000/prediction`, {
             text: inputText,
-            model_name: selectedOption
+            model_name: selectedModel
         });
 
         if (!response.data || !response.data.predictions) {
-            throw new Error("Unexpected response format from the server: Missing predictions.");
+            throw new Error("Unexpected server response: Missing predictions.");
         }
 
         setPredictions(response.data.predictions);
-        setSuccess('Εὖγε!<br/>Predictions generated.');
+        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
     }
+
+
 } catch (err) {
     setPredictions([]);
-    setError(err.message);
-    console.error("Error submitting text:", err);
+    setErrorMsg(err.message);
+    console.error("Error:", err);
 } finally {
-    setIsLoading(false);
+    setLoading(false);
 }};
 
 
-
   const isInputValid = inputText.trim() !== '';
-  const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${error ? 'is-invalid' : ''}`;
+  const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${errorMsg ? 'is-invalid' : ''}`;
   const isButtonDisabled = !isInputValid;
   const buttonClass = isButtonDisabled ? 'btn btn-secondary' : 'btn btn-primary';
 
+// page main content
   return (
     <div>
 
-      {isSidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
+      {sidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
 
-      <div className={`main-content ${isSidebarOpen ? 'shifted' : ''}`}>
+      <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
         <div className='container mt-5'>
         <div className="d-flex align-items-center mb-4">
         <button className="btn btn-outline-dark me-auto" onClick={toggleSidebar}>
             ☰ Menu
           </button>
-          <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar}/>
+          <Sidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar}/>
       <h1 className="text-center flex-grow-1 m-0">Word Prediction</h1>
       </div>
       <div className="d-flex mb-4">
       <div><p className='inline-label'>Select model: </p>
-      <select className="form-select model-select" value={selectedOption} onChange={handleOptionChange}>
-          {options.map((option) => (
+      <select className="form-select model-select" value={selectedModel} onChange={handleModelChange}>
+          {modelOptions.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -113,23 +117,22 @@ try {
           style={{ fontSize: '14px', height: '300px' }}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Enter text with [MASK]"
+          placeholder='Enter text with "?" for each missing word'
         />
             </div>
             <div>
         <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Predict</button>
       </div>
           </form>
-          {isLoading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>This may take several minutes.</p>}
-          {error && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{error}<br/>Please try again.</p>}
-          {success && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: success }}></p>}
+          {loading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>This may take a few seconds.</p>}
+          {errorMsg && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{errorMsg}<br/>Please try again.</p>}
+          {successMsg && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: successMsg }}></p>}
         </div>
         <div className="col-md-4">
-          {predictions && Object.entries(predictions).length > 0 && ( // check for null object
             <div className="mt-1">
               {Object.entries(predictions).map(([maskedIndex, prediction]) => (
                 <div key={maskedIndex}>
-                  <h5>Masked Token at index: {maskedIndex}</h5>
+                  <h5>Word Position: {maskedIndex}</h5>
                   <table className="table table-striped">
                     <thead>
                       <tr>
@@ -167,7 +170,6 @@ try {
                 </div>
               ))}
             </div>
-          )}
         </div>
       </div>
     </div>

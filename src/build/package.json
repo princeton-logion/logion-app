@@ -32,8 +32,7 @@
         "from": "../frontend/build",
         "to": "frontend",
         "filter": ["**/*"]
-      },
-      "!../backend/logion-venv/**/*"
+      }
     ],
     "extraResources": [
       {

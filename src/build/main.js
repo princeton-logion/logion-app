@@ -9,11 +9,11 @@ log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'logs
 const logFilePath = log.transports.file.getFile().path;
 
 let backendProcess;
-let loadingAPIscreen;
-let AppMainWindow;
+let loadingWindow;
+let mainWindow;
 
-function createLoadingScreen() {
-    loadingAPIscreen = new BrowserWindow({
+function createLoadingWindow() {
+    loadingWindow = new BrowserWindow({
         width: 400,
         height: 300,
         frame: false,
@@ -25,18 +25,18 @@ function createLoadingScreen() {
         },
     });
 
-    loadingAPIscreen.loadURL(`file://${path.join(__dirname, 'loading.html')}`);
+    loadingWindow.loadURL(`file://${path.join(__dirname, 'loading.html')}`);
 
-    loadingAPIscreen.on('closed', () => {
-        loadingAPIscreen = null;
+    loadingWindow.on('closed', () => {
+        loadingWindow = null;
     });
-    loadingAPIscreen.webContents.on('did-finish-load', () => {
+    loadingWindow.webContents.on('did-finish-load', () => {
         log.info('Loading window loaded')
     })
 }
 
 function createMainWindow() {
-    AppMainWindow = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1000,
         height: 650,
         webPreferences: {
@@ -49,41 +49,41 @@ function createMainWindow() {
         ? 'http://localhost:8000'  // React dev server
         : `file://${path.join(__dirname, 'frontend', 'index.html')}`;
 
-    AppMainWindow.webContents.on('did-finish-load', () => {
-        log.info('Main window loaded.');
+    mainWindow.webContents.on('did-finish-load', () => {
+        log.info('Main app window loaded');
     });
 
-    AppMainWindow.on('closed', () => {
+    mainWindow.on('closed', () => {
         if (backendProcess) {
             backendProcess.kill();
-            log.info('Killed backend API process.');
+            log.info('Quit backend API');
         }
-        AppMainWindow = null;
+        mainWindow = null;
     });
 }
 
 function startBackend() {
     let backendPath;
 
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NODE_ENV === 'development';
 
-    if (isDevelopment) {
+    if (isDev) {
         backendPath = '/Users/jm9095/logion-app/src/backend/dist/main';
         if (process.platform === 'win32') {
             backendPath += '.exe';
         }
-        log.info("Running in developer mode.");
+        log.info("Running in dev mode.");
     } else if (process.platform === 'win32') {
         backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // Win exec
-        log.info("Running production application on Windows.");
+        log.info("Running prod app on Windows.");
     } else if (process.platform === 'darwin') {
         backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // macOS exec
-        log.info("Running production application on macOS.");
+        log.info("Running prod app on macOS.");
     } else if (process.platform === 'linux') {
         backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // linx exec
-        log.info("Running production application on Linux.");
+        log.info("Running prod app on Linux.");
     } else {
-        log.error('Unsupported platform. Use one of these supported platforms: Windows, macOS, Linux.');
+        log.error('Invalid platform. Valid platforms: Windows, macOS, Linux.');
         app.quit();
         return;
     }
@@ -98,7 +98,7 @@ function startBackend() {
         });
         log.info('Backend API started.');
     } catch (err) {
-        log.error(`Failed to start API server: ${err.message}`);
+        log.error(`Unable to spawn API server: ${err.message}`);
     }
 
     backendProcess.on('spawn', () => {
@@ -106,7 +106,7 @@ function startBackend() {
     });
 
     backendProcess.on('error', (err) => {
-        log.error(`Failed to start API server: ${err}`);
+        log.error(`Unable to spawn API server: ${err}`);
     });
 
     backendProcess.stdout.on('data', (data) => {
@@ -118,16 +118,16 @@ function startBackend() {
     });
 
     backendProcess.on('close', (code) => {
-        log.info(`Exited API with code ${code}`);
+        log.info(`Quit API with code ${code}`);
     });
 }
 
 
-// 
+// check health endpoint for API server
 async function wait4ServerReady() {
     const healthEndpoint = 'http://127.0.0.1:8000/health';
     const retryInterval = 500; // 500 ms
-    const maxRetries = 100; // retry for 10 seconds (20 * 500ms)
+    const maxRetries = 120; // wait up to 1 min
 
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -137,25 +137,25 @@ async function wait4ServerReady() {
                 return true;
             }
         } catch (error) {
-            log.info('Waiting for API server...');
+            log.info('Awaiting API server...');
         }
         await new Promise(resolve => setTimeout(resolve, retryInterval));
     }
-    log.error('API server failed to start within the timeout period.');
+    log.error('Unable to spawn API server within timeout period.');
     return false;
 }
 
 app.whenReady().then(async () => {
-    createLoadingScreen(); // show loading screen on startup
-    startBackend(); // start backend on startup
+    createLoadingWindow(); // display load screen on launch
+    startBackend(); // start backend on launch
 
     const isBackendReady = await wait4ServerReady();
 
     if (isBackendReady) {
-        loadingAPIscreen.close(); // close loading screen when server is ready 
-        createMainWindow(); // then open main window
+        loadingWindow.close(); // close loading screen when API server ready 
+        createMainWindow(); // open main window
     } else {
-        log.error('API server failed to start. Exiting application.');
+        log.error('Unable to start API server. Quit app.');
         app.quit();
     }
 });
@@ -167,13 +167,13 @@ app.on('window-all-closed', () => {
     }
 });
 
-// prediction page
+// word prediction page
 ipcMain.handle('predict-request', async (event, requestData) => {
     try {
         const response = await axios.post('http://127.0.0.1:8000/prediction', requestData);
         return response.data;
     } catch (error) {
-        log.error("Error processing predict-request IPC:", error);
+        log.error("Unable to process predict-request IPC:", error);
     }
 });
 
@@ -183,6 +183,6 @@ ipcMain.handle('detect-request', async (event, requestData) => {
         const response = await axios.post('http://127.0.0.1:8000/detection', requestData);
         return response.data;
     } catch (error) {
-        log.error("Error processing detect-request IPC:", error);
+        log.error("Unable to process detect-request IPC:", error);
     }
 });

@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 
-def prediction_function(text: str, model: str, tokenizer: str, device, window_size: int=512, overlap: int=128, num_predictions: int=5):
+def prediction_function(text: str, model, tokenizer, device, window_size: int=512, overlap: int=128, num_predictions: int=5):
     """
     Masked language modeling inference for lacuna predictions using sliding window
     
@@ -52,7 +52,7 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
             sorted_preds, sorted_idx = torch.sort(predicted_probs, descending=True)
             masked_predictions = []
             for k in range(num_predictions):
-                predicted_index = sorted_idx[k].item()
+                predicted_index = int(sorted_idx[k].item())
                 predicted_token = tokenizer.convert_ids_to_tokens([predicted_index])[0]
                 probability = torch.softmax(predicted_probs, dim=-1)[predicted_index].item()
                 masked_predictions.append((predicted_token, probability))
@@ -63,7 +63,7 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
     final_predictions = {}
     for masked_index, prediction_list in all_predictions.items():
         # group subword predictions
-        subword_groups = {}
+        subword_groups: dict = {}
         for token, prob in prediction_list:
             if token.startswith("##"):
                 base_word = token[2:] # remove "##" prefix
@@ -76,7 +76,7 @@ def prediction_function(text: str, model: str, tokenizer: str, device, window_si
 
         whole_word_predictions = []
         for base_word, subword_list in subword_groups.items():
-          max_prob = 0
+          max_prob = 0.0
           for subtoken, prob in subword_list:
               if prob > max_prob:
                   max_prob = prob

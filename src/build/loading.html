@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Loading</title>
+    <title>Loading Window</title>
     <style>
         body {
             display: flex;
@@ -11,7 +11,7 @@
             margin: 0;
             background-color: white;
             color: black;
-            font-family: sans-serif;
+            font-family: arial;
             text-align: center;
             font-size: larger;
         }
@@ -19,14 +19,14 @@
 </head>
 <body>
     <div>
-       <div id="loading-message">Starting API server...</div>
-       <div id="error-message" style="color: red; display: none"></div>
+       <div id="loading-msg">Loading Logion...</div>
+       <div id="error-msg" style="color: red; display: none"></div>
     </div>
     <script>
         const { ipcRenderer } = require('electron');
         ipcRenderer.on('error', (event, message) => {
-            const errorMessage = document.getElementById('error-message');
-            const loadingMessage = document.getElementById('loading-message');
+            const errorMessage = document.getElementById('error-msg');
+            const loadingMessage = document.getElementById('loading-msg');
             loadingMessage.style.display = 'none';
             errorMessage.textContent = `Error: ${message}`;
             errorMessage.style.display = 'block';

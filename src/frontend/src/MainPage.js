@@ -6,14 +6,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 function MainPage() {
 
 
-  const [isTyping, setTyping] = useState(true);
-  const [displayedTitle, setDisplayedTitle] = useState("");
+  const [typing, setTyping] = useState(true);
+  const [appTitle, setAppTitle] = useState("");
   const fullTitle = "λόγιον";
     const typewriter = () => {
       let i = 0;
       const intervalId = setInterval(() => {
         if (i < fullTitle.length) {
-          setDisplayedTitle(fullTitle.substring(0, i + 1));
+          setAppTitle(fullTitle.substring(0, i + 1));
           i++;
 
         } else {
@@ -32,9 +32,9 @@ function MainPage() {
 
     <div className="main-content">
 
-      {isTyping ? (
+      {typing ? (
         <h1 className="logion-title typewriter">
-          {displayedTitle}
+          {appTitle}
         </h1>
       ) : (
         <h1 className="logion-title">

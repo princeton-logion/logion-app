@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Logion"
+version = "0.0.0"
+description = "A no-code language-modeling tool for Greek philology"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Jacob Murel"}, {email = "jm9095@princeton.edu"}]
+dependencies = [
+    "fastapi",
+    "mkdocs-material",
+    "mypy",
+    "nox",
+    "npx",
+    "numpy",
+    "polyleven",
+    "pre-commit",
+    "pydantic",
+    "pyinstaller",
+    "PyYAML",
+    "pytest",
+    "Requests",
+    "transformers",
+    "torch",
+    "uvicorn"
+]
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]

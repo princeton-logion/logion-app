@@ -7,12 +7,12 @@ from src.backend.models import model_loader
 load_encoder tests
 """
 
-def test_load_encoder_bert_success():
+def test_load_encoder_bert():
     model, tokenizer = model_loader.load_encoder("princeton-logion/LOGION-50k_wordpiece", "bert")
     assert isinstance(model, BertForMaskedLM)
     assert isinstance(tokenizer, BertTokenizer)
 
-def test_load_encoder_electra_success():
+def test_load_encoder_electra():
     model, tokenizer = model_loader.load_encoder("princeton-logion/base-electra", "electra")
     assert isinstance(model, ElectraForMaskedLM)
     assert isinstance(tokenizer, ElectraTokenizer)

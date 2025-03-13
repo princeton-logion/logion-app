@@ -1,10 +1,11 @@
 import torch
 import numpy as np
 from polyleven import levenshtein
-
+from multiprocessing import Pool
+from joblib import Parallel, delayed
 
 """
-Logion class for chance-confidence algorithm
+Logion class for error detection task
 """
 
 class Logion:
@@ -52,30 +53,33 @@ class Logion:
 
 
 
+  
+  #joblib for parallel inference
   def _get_mask_probabilities(self, masked_text_ids):
-    mask_positions = (masked_text_ids.squeeze() == self.Tokenizer.mask_token_id).nonzero().flatten().tolist()
-    logits = self.Model(masked_text_ids).logits.squeeze(0)
-    mask_logits = logits[mask_positions]
-    probabilities = self.sm(mask_logits)
+      mask_positions = (masked_text_ids.squeeze() == self.Tokenizer.mask_token_id).nonzero().flatten().tolist()
+      logits = self.Model(masked_text_ids).logits.squeeze(0)
+  
+      def compute_prob(mask_pos):
+          return self.sm(logits[mask_pos])
+  
+      probabilities = Parallel(n_jobs=8)(delayed(compute_prob)(pos) for pos in mask_positions)
+      return probabilities
 
-    return probabilities
 
 
 
   def _argkmax(self, array, k, dim=0, prefix=None):
-    if not prefix:
-      indices = []
-      for i in range(1,k+1):
-        indices.append(torch.kthvalue(-array, i, dim=dim).indices.cpu().numpy().tolist())
+    if prefix:
+        indices = []
+        values, top_indices = torch.topk(-array, k, dim=dim) # torch.topk rather than torch.kthvalue
+        for index in top_indices.cpu().numpy().tolist():
+            token = self.Tokenizer.convert_ids_to_tokens([index])[0]
+            if token.startswith(prefix):
+                indices.append(index)
+        return torch.tensor(indices[:k])
     else:
-      indices = []
-      i = 1
-      while len(indices) < k:
-        index = torch.kthvalue(-array, i, dim=dim).indices.cpu().numpy().tolist()
-        if self.Tokenizer.convert_ids_to_tokens(index)[0].startswith(prefix): indices.append(index)
-        i += 1
-      
-    return torch.tensor(indices)
+        return torch.topk(-array, k, dim=dim).indices.cpu()
+
 
 
 
@@ -104,8 +108,7 @@ class Logion:
     while added < k:
       if ind > len(array[0]):
         break
-      array = array.cpu()
-      val = torch.kthvalue(-array, ind, dim=dim).indices.numpy().tolist()
+      val = torch.kthvalue(-array, ind, dim=dim).indices.cpu().numpy().tolist()
       if prefix != '':
         cur_tok = self.Tokenizer.convert_ids_to_tokens([val[0]])[0].replace('##', '')
         trunc_prefix = prefix[:min(len(prefix), len(cur_tok))]
@@ -146,31 +149,36 @@ class Logion:
 
 
 
+
+
   def _beam_search(self, token_ids, beam_size, prefix='', breadth=100):
-    mask_positions = (token_ids.detach().clone().squeeze() == self.Tokenizer.mask_token_id).nonzero().flatten().tolist()
-    num_masked = len(mask_positions)
-    cur_preds = self._get_n_predictions(token_ids.detach().clone(), beam_size, prefix, mask_positions[0], [])
+      mask_positions = (token_ids.detach().clone().squeeze() == self.Tokenizer.mask_token_id).nonzero().flatten().tolist()
+      num_masked = len(mask_positions)
+      cur_preds = self._get_n_predictions(token_ids.detach().clone(), beam_size, prefix, mask_positions[0], [])
+  
+      for i in range(num_masked - 1):
+          with Pool(processes=8) as pool:  # adjust processes per # of CPU cores
+              candidates = pool.starmap(
+                  self._get_n_predictions,
+                  [(token_ids.detach().clone(), breadth, cur_preds[j][2], mask_positions[i + 1], cur_preds[j][0], cur_preds[j][1])
+                   for j in range(len(cur_preds))]
+              )
+  
+          candidates = [item for sublist in candidates for item in sublist]  # flatten results
+          candidates.sort(key=lambda k: k[1], reverse=True)
+          cur_preds = candidates[:beam_size] if i != num_masked - 2 else candidates[:breadth]
+  
+      return cur_preds
 
-    for i in range(num_masked - 1):
-      candidates = []
-      for j in range(len(cur_preds)):
-        candidates += self._get_n_predictions(token_ids.detach().clone(), breadth, cur_preds[j][2], mask_positions[i + 1], cur_preds[j][0], cur_preds[j][1])
-      candidates.sort(key=lambda k:k[1],reverse=True)
-      if i != num_masked - 2:
-        cur_preds = candidates[:beam_size]
-      else:
-        cur_preds = candidates[:breadth]
-
-    return cur_preds
 
 
 
   def _suggest_filtered(self, tokens, ground_token_id, filter):
     probs = self._get_mask_probabilities(tokens).cpu().squeeze()
     filtered_probs = probs * filter[ground_token_id]
-    suggestion = self._argkmax(filtered_probs, 1)
+    suggestion = torch.argmax(filtered_probs) #speed up filter via argmax
+    return suggestion, filtered_probs[suggestion].item()
 
-    return suggestion, probs[suggestion].item()
 
 
 

@@ -5,54 +5,62 @@ import './App.css';
 import Sidebar from './Sidebar';
 import { OverlayTrigger, Popover } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
-const isElectron = !!window.electron;
 
 function DetectionPage() {
     const [inputText, setInputText] = useState('');
     const [predictions, setPredictions] = useState([]);
     const [ccrValues, setCcrValues] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
-    const [selectedOption, setSelectedOption] = useState('Base BERT');
-    const [selectedLevDistance, setSelectedLevDistance] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const [successMsg, setSuccessMsg] = useState(null);
+    const [selectedModel, setSelectedModel] = useState('Base BERT');
+    const [selectedLevDist, setSelectedLevDist] = useState(1);
     const [activePopoverWord, setActivePopoverWord] = useState(null);
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const popoverRef = useRef(null);
     const wordRef = useRef(null);
+    const isElectron = !!window.electron;
+    
 
-    const options = [
+    const modelOptions = [
         'Base BERT',
         'Base ELECTRA',
     ];
 
-    const levDistanceOptions = [1, 2, 3];
+    const levDistOptions = [1, 2, 3];
 
     const toggleSidebar = () => {
-        setSidebarOpen(!isSidebarOpen);
+        setSidebarOpen(!sidebarOpen);
     };
 
-    const handleOptionChange = (e) => {
-        setSelectedOption(e.target.value);
+    const handleModelChange = (e) => {
+        setSelectedModel(e.target.value);
     };
 
-    const handleLevDistanceChange = (e) => {
-       setSelectedLevDistance(parseInt(e.target.value, 10)); // confirm Lev is number
+    const handleLevDistChange = (e) => {
+       setSelectedLevDist(parseInt(e.target.value, 10)); // confirm Lev is number
     };
 
-    const getColor = (score) => {
-        // log scale for better optics
-        const logScore = Math.log10(score);
-        const normalizedScore = Math.max(0, Math.min(1, (logScore + 4) / 4));
 
-        // nomaralize + clip score for HSL
-        const hue = (120 * normalizedScore).toFixed(0);
-        return `hsl(${hue}, 100%, 50%)`;
-    };
+	// results color coding logic
+    const setWordColor = (score) => {
+    const logScore = Math.log10(score);
+    const normalizedScore = Math.max(0, Math.min(1, (logScore + 4) / 4));
+    // color-blind-friendly colors
+    const colors = [
+    	'#D55E00', // red
+        '#EE7733', // orange
+        '#DDAA33', // yellow
+        '#228833', // green
+    ];
+    // map score to color indx
+    const colorIndex = Math.floor(normalizedScore * (colors.length - 1));
+    return colors[colorIndex];
+};
 
     const handleWordClick = (word) => {
     if (activePopoverWord?.word === word.word) {
-        // click same word to close popover
+        // click word to open/close pop-up
         setActivePopoverWord(null);
     } else {
         setActivePopoverWord(word);
@@ -74,14 +82,15 @@ function DetectionPage() {
     }, [popoverRef]);
 
 
-    const renderTextWithHighlights = () => {
+	// text results renderer
+    const renderTextResultsWithColor = () => {
         if (!predictions || predictions.length === 0 || !ccrValues || ccrValues.length === 0) return null;
     
-    // zip preds and ccrs to associate correct values
+    	// zip preds and ccrs to associate correct values
         const textElements = predictions.map((wordPrediction, index) => {
         const { original_word, suggestions } = wordPrediction;
         const ccr = ccrValues[index]?.ccr_value;
-        const color = getColor(ccr);
+        const color = setWordColor(ccr);
     
         return (
             <span
@@ -144,19 +153,19 @@ function DetectionPage() {
 
    const handleSubmit = async (e) => {
        e.preventDefault();
-       setIsLoading(true);
-       setError(null);
-       setSuccess(null);
+       setLoading(true);
+       setErrorMsg(null);
+       setSuccessMsg(null);
 
        
-
+// server connection for dev vs Electron testing
 try {
     if (isElectron) {
         // Electron IPC
         const response = await window.electron.ipcRenderer.invoke('detect-request', {
             text: inputText,
-            model_name: selectedOption,
-            lev_distance: selectedLevDistance,
+            model_name: selectedModel,
+            lev_distance: selectedLevDist,
         });
 
         // response validation
@@ -166,58 +175,59 @@ try {
 
         setPredictions(response.predictions);
         setCcrValues(response.ccr);
-        setSuccess('Εὖγε!<br/>Predictions generated.');
+        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
     } else {
         // Axios for external API
         const response = await axios.post(`http://localhost:8000/detection`, {
             text: inputText,
-            model_name: selectedOption,
-            lev_distance: selectedLevDistance,
+            model_name: selectedModel,
+            lev_distance: selectedLevDist,
         });
 
         // response validation
         if (!response.data || !response.data.predictions || !response.data.ccr) {
-            throw new Error("Unexpected response format from the server: Missing predictions or CCR scores.");
+            throw new Error("Unexpected server response: Missing predictions or CCR scores.");
         }
 
         setPredictions(response.data.predictions);
         setCcrValues(response.data.ccr);
-        setSuccess('Εὖγε!<br/>Predictions generated.');
+        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
     }
 } catch (err) {
     setPredictions([]);
     setCcrValues([]);
-    setError(err.message);
-    console.error("Error submitting form:", err);
+    setErrorMsg(err.message);
+    console.error("Error:", err);
 } finally {
-    setIsLoading(false);
+    setLoading(false);
 }};
 
 
 
     const isInputValid = inputText.trim() !== '';
-    const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${error ? 'is-invalid' : ''}`;
+    const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${errorMsg ? 'is-invalid' : ''}`;
     const isButtonDisabled = !isInputValid;
     const buttonClass = isButtonDisabled ? 'btn btn-secondary' : 'btn btn-primary';
 
+// page main content
     return (
         <div>
 
-            {isSidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
+            {sidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
             
-            <div className={`main-content ${isSidebarOpen ? 'shifted' : ''}`}>
+            <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
                 <div className='container mt-5'>
                     <div className="d-flex align-items-center mb-4">
                     <button className="btn btn-outline-dark me-auto" onClick={toggleSidebar}>
                         ☰ Menu
                     </button>
-                    <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar}/>
+                    <Sidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar}/>
                 <h1 className="text-center flex-grow-1 m-0">Error Detection</h1>
                 </div>
                 <div className="d-flex mb-4 col-md-7">
                     <div><p className='inline-label'>Select model: </p>
-                    <select className="form-select model-select" value={selectedOption} onChange={handleOptionChange}>
-                    {options.map((option) => (
+                    <select className="form-select model-select" value={selectedModel} onChange={handleModelChange}>
+                    {modelOptions.map((option) => (
                         <option key={option} value={option}>
                         {option}
                         </option>
@@ -240,8 +250,8 @@ try {
                          <i className="fas fa-info-circle" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
                          </sup> 
                        </OverlayTrigger></p>
-                    <select className="form-select lev-distance-select" value={selectedLevDistance} onChange={handleLevDistanceChange}>
-                    {levDistanceOptions.map((dist) => (
+                    <select className="form-select lev-distance-select" value={selectedLevDist} onChange={handleLevDistChange}>
+                    {levDistOptions.map((dist) => (
                         <option key={dist} value={dist}>
                         {dist}
                         </option>
@@ -263,14 +273,14 @@ try {
                     />
                         </div>
                         <div>
-                    <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Detect errors</button>
+                    <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Detect Errors</button>
                 </div>
                     </form>
-                    {isLoading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.</p>}
-                    {error && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{error}<br/>Please try again.</p>}
-                    {success && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: success }}></p>}
+                    {loading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>This may take several minutes.</p>}
+                    {errorMsg && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{errorMsg}<br/>Please try again.</p>}
+                    {successMsg && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: successMsg }}></p>}
                     <div>
-                    {renderTextWithHighlights()}
+                    {renderTextResultsWithColor()}
                     </div>
                     </div>
                     
