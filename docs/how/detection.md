@@ -12,7 +12,7 @@ The Levenshtein distance drop-down menu is to the right of the model selection m
 
 Once you have selected your preferred model, you may type/paste your text into the text area. Unlike, Logion's word prediction feature, do NOT use "?" to represent any missing words. Error detection results are better the less missing words the input text has. Input text that contains only Greek script and punctuation.
 
-Then, click the blue "Detect Errors" button below the text area. Note the error detection process can take several minutes depending on one's local hardware. To read more on how hardware affects error detection processing speed, click [here]().
+Then, click the blue "Detect Errors" button below the text area. Note the error detection process can take several minutes depending on one's local hardware. To read more on how hardware affects error detection processing speed, click [here](https://princeton-logion.github.io/logion-app/hardware/).
 
 Logion will display error detection results below the "Detect Errors" button. Text is color-coded to signify each given word's likelihood of it having been mis-transcribed at some point in the work's textual history. Green means the word is unlikely to be mis-transcribed, red means the word is very likely to be mis-transcribed. To see what the model suggests as the correct word, click on a given word. Alternative word suggestions will be displayed on the right-hand side of the window. You may simply click on a different word to display that word's results.
 
