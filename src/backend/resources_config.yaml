@@ -1,0 +1,17 @@
+models:
+  - name: "Base BERT"
+    repo: "princeton-logion/LOGION-50k_wordpiece"
+    type: "bert"
+
+  - name: "Base ELECTRA"
+    repo: "princeton-logion/base-electra"
+    type: "electra"
+
+  - name: "platoBERT"
+    repo: "princeton-logion/logion-bert-plato"
+    type: "bert"
+
+lev_filter:
+   lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
+   lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"
+   lev3: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/3.npy"

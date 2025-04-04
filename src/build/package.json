@@ -1,0 +1,75 @@
+{
+  "name": "logion",
+  "version": "0.0.0",
+  "author": "Jacob Murel",
+  "license": "MIT",
+  "description": "A machine learning tool for Greek philology",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "concurrently \"NODE_ENV=development npm run start\" \"source logion-dev/bin/activate && cd ../backend && python3 -m uvicorn main:app\" \"cd frontend && npm start\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "@electron/osx-sign": "^1.3.2"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "electron-log": "^5.2.4"
+  },
+  "build": {
+    "appId": "edu.princeton.logion",
+    "productName": "Logion",
+    "buildVersion": "0.0.0",
+    "copyright": "Copyright (c) 2025 Jacob Murel and The Trustees of Princeton University",
+    "files": [
+      "main.js",
+      "loading.html",
+      {
+        "from": "../frontend/build",
+        "to": "frontend",
+        "filter": ["**/*"]
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/",
+        "to": "./extraResources/",
+        "filter": ["**/*"]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icons/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "icons/icon.png",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "identity": null,
+      "provisioningProfile": null
+    },
+    "dmg": {
+      "sign": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "afterSign": "./post-sign.js"
+  }
+}
