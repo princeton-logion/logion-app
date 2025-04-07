@@ -1,0 +1,8 @@
+extends: existence
+message: "Standardize spacing."
+level: error
+nonword: true
+tokens:
+  - '[α-ωa-z:;,.?!] {2,}[Α-Ωα-ωA-Za-z]'
+  - '[α-ωa-z][:;,.?!][Α-Ωα-ωA-Za-z]'
+  - '[α-ωa-z] {1,}[:;,.?!]'

@@ -1,0 +1,13 @@
+extends: existence
+message: "No punctuation in header '%s'."
+nonword: true
+level: error
+scope: heading
+action:
+  name: edit
+  params:
+    - regex
+    - '([α-ωa-z][.,;:!?])'
+    - '$1'
+tokens:
+  - "[α-ωa-z][.,;:!?]"

@@ -1,0 +1,16 @@
+extends: capitalization
+message: "Use sentence-style casing in header '%s'."
+level: error
+scope: heading
+match: $sentence
+exceptions:
+  - CPU
+  - GPU
+  - Logion
+  - Levenshtein
+  - Greek
+  - Latin
+  - Classics
+  - '[Α-Ωα-ω]+'
+  - Windows
+  - macOS
