@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loading Window</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: white;
+            color: black;
+            font-family: arial;
+            text-align: center;
+            font-size: larger;
+        }
+    </style>
+</head>
+<body>
+    <div>
+       <div id="loading-msg">Loading Logion...</div>
+       <div id="error-msg" style="color: red; display: none"></div>
+    </div>
+    <script>
+        const { ipcRenderer } = require('electron');
+        ipcRenderer.on('error', (event, message) => {
+            const errorMessage = document.getElementById('error-msg');
+            const loadingMessage = document.getElementById('loading-msg');
+            loadingMessage.style.display = 'none';
+            errorMessage.textContent = `Error: ${message}`;
+            errorMessage.style.display = 'block';
+          });
+
+    </script>
+</body>
+</html>

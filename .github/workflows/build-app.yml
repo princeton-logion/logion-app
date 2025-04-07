@@ -1,0 +1,107 @@
+name: Build desktop app
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_package:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'macos-latest']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies -- Win
+        if: matrix.os == 'windows-latest'
+        run: |
+          pip install -r requirements.txt || true
+          pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
+      
+      - name: Install dependencies -- macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          pip install -r requirements.txt || true
+          pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
+      
+      - name: Build backend exec
+        run: |
+          pyinstaller --onefile --paths . --add-data "resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py
+        working-directory: ./src/backend/
+
+      - name: Create Artifact -- Win
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-executable-windows
+          path: ./src/backend/dist/
+
+      - name: Create Artifact -- macOS
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-executable-mac
+          path: ./src/backend/dist/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+
+      - name: Install npm
+        run: |
+          npm install
+        working-directory: ./src/frontend/
+
+      - name: Pkg Frontend
+        run: |
+          npm run build
+        working-directory: ./src/frontend/
+
+      - name: Create Frontend Artifact -- Win
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-win
+          path: ./src/frontend/build/
+
+      - name: Create Frontend Artifact -- macOS
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-mac
+          path: ./src/frontend/build/
+
+      - name: Install npm
+        run: |
+          npm install
+        working-directory: ./src/build/
+
+      - name: Build Electron App
+        run: |
+          npm run build
+        working-directory: ./src/build/
+
+      - name: Create Packaged App -- Win
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-app-windows
+          path: ./src/build/dist/
+
+      - name: Create Packaged App -- macOS
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-app-mac
+          path: ./src/build/dist/

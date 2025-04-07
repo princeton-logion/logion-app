@@ -1,0 +1,44 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools",
+  "wheel",
+]
+
+[project]
+name = "logion"
+version = "0.0.0"
+description = "A no-code language-modeling tool for Greek philology"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Jacob Murel"}, {email = "jm9095@princeton.edu"}]
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+  "fastapi",
+  "mkdocs-material",
+  "mypy",
+  "nox",
+  "npx",
+  "numpy",
+  "polyleven",
+  "pre-commit",
+  "pydantic",
+  "pyinstaller",
+  "pytest",
+  "PyYAML",
+  "Requests",
+  "torch",
+  "transformers",
+  "uvicorn",
+]
+
+[project-urls]
+"Homepage" = "https://github.com/princeton-logion/logion-app"
+"Model Repo" = "https://huggingface.co/princeton-logion"
+"Docs" = "https://princeton-logion.github.io/logion-app/"
