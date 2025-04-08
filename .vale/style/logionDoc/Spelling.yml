@@ -1,0 +1,7 @@
+extends: spelling
+message: "Check spelling for '%s'."
+vocab: false
+level: error
+ignore:
+    - '[Α-Ωα-ω]+'
+    - logionDoc/spell-exceptions.txt

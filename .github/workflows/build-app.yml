@@ -27,13 +27,13 @@ jobs:
         run: |
           pip install -r requirements.txt || true
           pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
-      
+
       - name: Install dependencies -- macOS
         if: matrix.os == 'macos-latest'
         run: |
           pip install -r requirements.txt || true
           pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
-      
+
       - name: Build backend exec
         run: |
           pyinstaller --onefile --paths . --add-data "resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py

@@ -9,7 +9,6 @@ jobs:
   proof-publish-doc:
     name: Publish doc
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
       - name: Execute vale

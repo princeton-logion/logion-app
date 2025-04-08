@@ -1,7 +1,11 @@
-# What is Levenshtein distance?
+# Levenshtein distance
 
-Levenshtein distance is a term from natural language processing (NLP) that refers to the minimum number of alterations needed to transform one word into another.
+Levenshtein distance is a term from natural language processing (NLP). It refers to the minimum number of letter-level alterations needed to transform one word into another.
 
-## How does Logion use Levenshtein distance?
+For example, say we transform *δε* to *τε*. This transformation requires changing one letter in the original word (*δ* **->** *τ*) to obtain the new word. Because the transformation requires changing only one letter, *δε* and *τε* are 1 Levenshtein distance apart.
 
-As such, the selected Levenshtein distance will here limit the model's suggestions to words that have that many character/letter differences from words in the original input text.
+## How Logion uses Levenshtein distance
+
+The Logion app uses Levenshtein distance to filter suggestions for [error detection](../how-to/detection.md). During error detection, a model looks for misspelled or mistranscribed words and suggests potential replacements. Our [research](https://muse.jhu.edu/pub/1/article/901022) suggests that these suggestions are generally less accurate the greater their Levenshtein distance from the original word. When searching for replacement words, then, Logion filters model suggestions per a chosen Levenshtein distance.
+
+On the Error Detection page, users may select a Levenshtein distance of 1, 2, or 3. Logion uses that value to filter the model's suggestions.

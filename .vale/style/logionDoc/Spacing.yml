@@ -1,8 +1,16 @@
 extends: existence
-message: "Standardize spacing."
-level: error
+message: "Standardize spacing for '%s'."
+level: warning
 nonword: true
 tokens:
   - '[α-ωa-z:;,.?!] {2,}[Α-Ωα-ωA-Za-z]'
-  - '[α-ωa-z][:;,.?!][Α-Ωα-ωA-Za-z]'
-  - '[α-ωa-z] {1,}[:;,.?!]'
+  - '[α-ωa-z][:;,.?!][Α-Ωα-ωA-Za-z]{1,}'
+  - '[α-ωa-z] {1,}[:;,.?!] {1,}'
+exceptions:
+  - '.md'
+  - '.zip'
+  - '.txt'
+  - '.json'
+  - '.xml'
+  - 'e.g'
+  - 'i.e'

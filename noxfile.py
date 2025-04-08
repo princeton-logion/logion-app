@@ -11,8 +11,10 @@ def tests(session: nox.Session):
 @nox.session
 def lint(session: nox.Session):
     session.install("pre-commit")
-    session.run(
-        "pre-commit",
-        "run",
-        "--all-files",
-    )
+    session.run("pre-commit", "run", "--all-files")
+
+
+@nox.session
+def vale(session: nox.Session):
+    session.install("vale")
+    session.run("vale", "README.md", "docs")

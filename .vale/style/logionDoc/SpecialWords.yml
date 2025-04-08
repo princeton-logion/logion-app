@@ -1,0 +1,23 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: false
+action:
+  name: replace
+swap:
+  "(?:e-mail|Email|E-mail)": email
+  "(?:artificial intelligence|ai)": AI
+  "(?:click in|click on)": click
+  application: app
+  approx\.: approximately
+  CLI: command-line tool
+  file name: filename
+  open-source: open source
+  url: URL
+  vs\.: versus
+  World Wide Web: web
+  macOS: MacOS
+  pre-modern: premodern
+  error-detection: error detection
+  mis-transcribe: mistranscribe
+  mis-transcribed: mistranscribed

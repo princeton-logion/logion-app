@@ -135,6 +135,7 @@ def load_filter_from_url(url):
 Server status endpoint
 """
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
@@ -144,9 +145,12 @@ async def health_check():
 Model retrieval endpoint
 """
 
+
 @app.get("/models", response_model=list[str])
 def get_models():
-    config_data = load_config_from_url("https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/backend/resources_config.yaml")
+    config_data = load_config_from_url(
+        "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/backend/resources_config.yaml"
+    )
     if "models" in config_data:
         model_names = [model["name"] for model in config_data["models"]]
         return model_names
@@ -156,6 +160,7 @@ def get_models():
 """
 Token prediction task
 """
+
 
 @app.post("/prediction", response_model=prediction_schemas.PredictionResponse)
 async def prediction_endpoint(request: prediction_schemas.PredictionRequest):
@@ -214,6 +219,7 @@ async def prediction_endpoint(request: prediction_schemas.PredictionRequest):
 """
 Error detection task
 """
+
 
 @app.post("/detection", response_model=detection_schemas.DetectionResponse)
 async def detection_endpoint(request: detection_schemas.DetectionRequest):

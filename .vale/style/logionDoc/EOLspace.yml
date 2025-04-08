@@ -1,0 +1,6 @@
+extends: existence
+message: "Remove whitespace from EOL."
+level: suggestion
+scope: raw
+raw:
+  - ' +\n'

@@ -1,0 +1,10 @@
+GPU
+GPUs
+CPU
+CPUs
+Logion
+Logion's
+Levenshtein
+Nvidia
+mistranscribed
+mistranscribe

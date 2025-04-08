@@ -1,0 +1,16 @@
+fastapi
+mkdocs-material
+mypy
+nox
+npx
+numpy
+polyleven
+pre-commit
+pydantic
+pyinstaller
+pytest
+PyYAML
+Requests
+torch
+transformers
+uvicorn

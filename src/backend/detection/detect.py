@@ -12,7 +12,7 @@ def detection_function(
     device,
     chunk_size: int = 500,
     lev: int = 1,
-    no_beam=False
+    no_beam=False,
 ):
     """
     Masked language modeling for detecting and suggesting corrections to potential erroneous words in input text.
