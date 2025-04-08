@@ -2,11 +2,9 @@ name: Doc workflow
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main", "dev"]
   pull_request:
-    branches:
-      - main
+    branches: ["main", "dev"]
 
 jobs:
   proof-publish-doc:
