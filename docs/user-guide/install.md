@@ -8,7 +8,7 @@ After you access the Google Drive folder via a link provided by a Logion team me
     1. `logion-win` is for Windows.
     1. `logion-mac` is for MacOS.
 
-1. Click the **⋮** icon and select **Download** from the drop-down menu. This downloads the app .zip file.
+1. Click the "**⋮**" icon and select **Download** from the drop-down menu. This downloads the app .zip file.
 
 1. When the download finishes, go to your **Downloads** folder and double-click the Logion .zip file. This unzips the app into a new folder.
 
