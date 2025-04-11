@@ -1,6 +1,6 @@
 .mypy_cache/
 .vscode/
-**/*.DS_Store
+.DS_Store
 *.log
 vale-edit.py
 vale_output.json
