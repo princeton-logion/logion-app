@@ -1,11 +1,7 @@
 models:
   - name: "Base BERT"
-    repo: "princeton-logion/LOGION-50k_wordpiece"
+    repo: "princeton-logion/logion-bert-base"
     type: "bert"
-
-  - name: "Base ELECTRA"
-    repo: "princeton-logion/base-electra"
-    type: "electra"
 
   - name: "platoBERT"
     repo: "princeton-logion/logion-bert-plato"

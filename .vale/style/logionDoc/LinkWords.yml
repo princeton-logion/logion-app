@@ -2,7 +2,6 @@ extends: existence
 message: "Improve link text accessibility for '%s'."
 level: error
 ignorecase: true
-vocab: false
 scope: raw
 nonword: true
 tokens:

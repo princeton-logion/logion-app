@@ -1,6 +1,6 @@
 # Levenshtein distance
 
-Levenshtein distance is a term from natural language processing (NLP). It refers to the minimum number of letter-level alterations needed to transform one word into another.
+Levenshtein distance is a term from natural language processing (NLP). It refers to the minimum number of character-level alterations needed to transform one word into another.
 
 For example, say we transform *δε* to *τε*. This transformation requires changing one letter in the original word (*δ* **->** *τ*) to obtain the new word. Because the transformation requires changing only one letter, *δε* and *τε* are 1 Levenshtein distance apart.
 

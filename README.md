@@ -3,7 +3,7 @@
 An open source, no-code language modeling tool for premodern Greek philology.
 
 ## Description
-Logion provides provides a no-code user interface through which researchers may obtain suggestions for common classical philological research tasks, such as text restoration and scribal error detection. In this way, Logion empowers classical philologists to leverage advances in AI to assist their research. Logion is designed to be run on personal computers without access to high performance computing (HPC) resources.
+Logion provides provides a no-code user interface through which researchers may obtain suggestions for common classical philological research tasks, such as text restoration and scribal error detection. In this way, Logion empowers classical philologists to leverage advances in AI to assist their research. Logion runs on personal computers without access to high performance computing (HPC) resources. We hope to make an HPC version available in the coming months.
 
 ## Installation
 Logion runs on both Windows and MacOS.

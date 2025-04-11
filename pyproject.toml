@@ -36,7 +36,7 @@ dependencies = [
   "torch",
   "transformers",
   "uvicorn",
-  "vale"
+  "vale",
 ]
 
 [project-urls]

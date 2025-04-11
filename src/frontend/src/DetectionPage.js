@@ -60,12 +60,12 @@ function DetectionPage() {
     return colors[colorIndex];
 };
 
-    const handleWordClick = (word) => {
-    if (activePopoverWord?.word === word.word) {
+    const handleWordClick = (wordData) => {
+    if (activePopoverWord?.originalIndex === wordData.originalIndex) {
         // click word to open/close pop-up
         setActivePopoverWord(null);
     } else {
-        setActivePopoverWord(word);
+        setActivePopoverWord(wordData);
     }
     };
 
@@ -98,13 +98,17 @@ function DetectionPage() {
             <span
                 key={`${original_word}-${index}`}
                 style={{ color: color, cursor: "pointer" }}
-                onClick={() => handleWordClick({ word: original_word, suggestions })}
+                onClick={() => handleWordClick({ word: original_word, suggestions, originalIndex: index })}
                 ref={wordRef}
             >
                 {original_word + " "}
             </span>
         );
     });
+
+    const currentWordCCR = activePopoverWord && typeof activePopoverWord.originalIndex === 'number' && ccrValues[activePopoverWord.originalIndex]
+            ? ccrValues[activePopoverWord.originalIndex].ccr_value
+            : null;
 
         return (
         <div className='d-flex'>
@@ -117,15 +121,29 @@ function DetectionPage() {
                 <table className="table table-striped">
                 <thead>
                     <tr>
-                    <th>Prediction</th>
-                    <th>Probability
+                    <th>Prediction<OverlayTrigger
+                           trigger="click"
+                           overlay={
+                             <Popover id={`popover-probability`}>
+                               <Popover.Header as="h3">About predictions</Popover.Header>
+                               <Popover.Body>
+                                All Logion predictions lack diacritics.
+                               </Popover.Body>
+                             </Popover>
+                           }
+                           >
+                            <sup>
+                         <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
+                         </sup>
+                       </OverlayTrigger></th>
+                    <th>Chance-confidence
                     <OverlayTrigger
                            trigger="click"
                            overlay={
                              <Popover id={`popover-probability`}>
-                               <Popover.Header as="h3">What is probability?</Popover.Header>
+                               <Popover.Header as="h3">What is CCR?</Popover.Header>
                                <Popover.Body>
-                               The model's predicted likelihood of a word appearing in its given context.
+                               The chance-confidence score measures the probability a word is a mistranscription. A lower score suggests higher error probability.
                                </Popover.Body>
                              </Popover>
                            }
@@ -141,7 +159,7 @@ function DetectionPage() {
                     {activePopoverWord.suggestions.map((pred, idx) => (
                     <tr key={idx}>
                         <td>{pred.token}</td>
-                        <td>{(pred.probability * 100).toFixed(2)}%</td>
+                        <td>{typeof currentWordCCR === 'number' ? currentWordCCR.toFixed(4): 'N/A'}</td>
                     </tr>
                     ))}
                 </tbody>
@@ -278,7 +296,7 @@ try {
                     <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Detect Errors</button>
                 </div>
                     </form>
-                    {loading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>This may take several minutes.</p>}
+                    {loading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>Depending on your hardware,<br/>this may take up to 30 minutes<br/>for a passage of 150 words.</p>}
                     {errorMsg && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{errorMsg}<br/>Please try again.</p>}
                     {successMsg && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: successMsg }}></p>}
                     <div>

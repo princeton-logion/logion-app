@@ -141,7 +141,21 @@ try {
                     <thead>
                       <tr>
                         <th>Prediction
-
+                        <OverlayTrigger
+                           trigger="click"
+                           overlay={
+                             <Popover id={`popover-probability`}>
+                               <Popover.Header as="h3">About predictions</Popover.Header>
+                               <Popover.Body>
+                                All Logion predictions lack diacritics.
+                               </Popover.Body>
+                             </Popover>
+                           }
+                           >
+                            <sup>
+                         <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
+                         </sup>
+                       </OverlayTrigger>
                         </th>
                         <th>Probability
                         <OverlayTrigger
@@ -150,7 +164,7 @@ try {
                               <Popover id={`popover-probability`}>
                                 <Popover.Header as="h3">What is probability?</Popover.Header>
                                 <Popover.Body>
-                                The model's predicted likelihood of a word appearing in its given context.
+                                The model's predicted likelihood a word appears in the given context.
                                 </Popover.Body>
                               </Popover>
                             }

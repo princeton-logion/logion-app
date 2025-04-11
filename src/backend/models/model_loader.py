@@ -5,7 +5,8 @@ from transformers import (
     ElectraForMaskedLM,
 )
 import torch
-#import intel_extension_for_pytorch
+
+# import intel_extension_for_pytorch
 import logging
 import platform
 
@@ -57,9 +58,9 @@ def load_device(model: torch.nn.Module):
     elif platform.system() == "Darwin" and torch.backends.mps.is_available():
         logging.info("MPS Metal available")
         device = torch.device("mps")
-    #elif hasattr(torch, "xpu") and torch.xpu.is_available():
-        #logging.info("Intel XPU available")
-        #device = torch.device("xpu")
+    # elif hasattr(torch, "xpu") and torch.xpu.is_available():
+    # logging.info("Intel XPU available")
+    # device = torch.device("xpu")
     else:
         device = torch.device("cpu")
 
