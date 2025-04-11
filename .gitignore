@@ -1,6 +1,6 @@
 .mypy_cache/
 .vscode/
-.DS_Store
+**/*.DS_Store
 *.log
 vale-edit.py
 vale_output.json
@@ -10,6 +10,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pyc
+
+# Distribution / packaging
+*.egg-info/
+*.egg
 
 # PyInstaller
 *.manifest
