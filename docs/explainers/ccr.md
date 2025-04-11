@@ -21,3 +21,5 @@ Logion filters model suggestions for each word using [Levenshtein distance](lev-
 ### The ratio
 
 The algorithm then essentially divides the original word's chance score by the confidence score of its highest-suggested replacement. The result is the chance-confidence ratio for that word pair.
+
+A higher chance-confidence score means the current word is highly likely in its current context. A lower chance-confidence score means the current word is unlikely relative to the model's suggested replacement. In other words, a lower score means a likely transcription error while a higher score means the word is unlikely to have been mistranscribed.

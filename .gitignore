@@ -1,0 +1,23 @@
+.mypy_cache/
+.vscode/
+.DS_Store
+*.log
+vale-edit.py
+vale_output.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.pyc
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+.nox/
+.cache
+
+# npm
+node_modules/

@@ -1,7 +1,7 @@
 site_name: "Logion: Machine Learning for Greek Philology"
 site_url: https://princeton-logion.github.io/logion-app/
 repo_url: https://github.com/princeton-logion/logion-app
-copyright: Copyright &copy; 2025 Jacob Murel and The Trustees of Princeton University
+copyright: Copyright &copy; 2025 Princeton University
 theme:
   name: material
   logo: assets/img/logo192.png

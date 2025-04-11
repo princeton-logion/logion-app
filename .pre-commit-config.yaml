@@ -28,8 +28,10 @@ repos:
     rev: v1.0.1
     hooks:
       - id: mypy
-        files: logion-app
-        args: [--strict, --ignore-missing-imports]
+        files: src/backend
+        args: [--strict, --ignore-missing-imports, --install-types]
+        additional_dependencies:
+          [types-requests]
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
