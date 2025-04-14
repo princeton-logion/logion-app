@@ -5,7 +5,7 @@ const axios = require('axios');
 const log = require('electron-log');
 
 // set log file -- same as backend
-log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
+log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
 const logFilePath = log.transports.file.getFile().path;
 
 let backendProcess;
@@ -45,9 +45,7 @@ function createMainWindow() {
         },
     });
 
-    const startURL = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8000'  // React dev server
-        : `file://${path.join(__dirname, 'frontend', 'index.html')}`;
+    mainWindow.loadURL(`file://${path.join(__dirname, 'frontend', 'index.html')}`);
 
     mainWindow.webContents.on('did-finish-load', () => {
         log.info('Main app window loaded');

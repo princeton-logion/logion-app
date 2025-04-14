@@ -5,7 +5,7 @@ philological research tasks, such as error word detection and gap filling. Logio
 personal computers without access to high performance computing (HPC) resources. We hope to make an HPC version available in the coming months.
 
 ## Installation
-Logion runs on both Windows and MacOS .
+Logion runs on both Windows and MacOS.
 
 We hope make the app publicly available for download through our website soon.
 

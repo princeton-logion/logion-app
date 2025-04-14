@@ -1,11 +1,12 @@
 extends: existence
 message: "Standardize spacing for '%s'."
-level: warning
+level: error
 nonword: true
+scope: raw
 tokens:
   - '[α-ωa-z:;,.?!] {2,}[Α-Ωα-ωA-Za-z]'
-  - '[α-ωa-z][:;,.?!][Α-Ωα-ωA-Za-z]{1,}'
-  - '[α-ωa-z] {1,}[:;,.?!] {1,}'
+  - '[Α-Ωα-ωA-Za-z][:;,.?!][Α-Ωα-ωA-Za-z]{1,}'
+  - '[Α-Ωα-ωA-Za-z] +[:;,.?!][ \t\n*_]+'
 exceptions:
   - '.md'
   - '.zip'
@@ -14,3 +15,6 @@ exceptions:
   - '.xml'
   - 'e.g'
   - 'i.e'
+  - '.co'
+  - '.org'
+  - '.jhu'

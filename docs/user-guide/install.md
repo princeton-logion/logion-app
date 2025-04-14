@@ -2,7 +2,7 @@
 
 *For the time being, only select researchers provided with a Google Drive link can download the Logion desktop app.*
 
-After you access can't the Google Drive folder via a link provided by a Logion team member, follow these instructions to download and install the app:
+After you access the Google Drive folder, follow these instructions to download and install the app:
 
 1. Hover to the version of Logion corresponding to your device's operating system.
     1. `logion-win` is for Windows.

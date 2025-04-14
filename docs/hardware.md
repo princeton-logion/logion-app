@@ -1,4 +1,4 @@
-# περῐ́ τῆς μηχᾰνῆς
+# Περῐ́ τῆς μηχᾰνῆς
 
 Logion doesn't require access to high-performance computing (HPC) resources. It's designed to run on personal computers with diverse hardware and operating systems.
 
@@ -32,6 +32,6 @@ Our team's internal experiments suggest that, when executing Logion's error dete
 #### On Windows
 1. Right-click the taskbar.
 2. Select **Task Manager**.
-3. Click the **Performance** tab in the Task Manager .
+3. Click the **Performance** tab in the Task Manager.
 4. Scroll down and select **GPU 0**.
 5. GPU information appears in the top-right corner.
