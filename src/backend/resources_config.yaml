@@ -3,7 +3,7 @@ models:
     repo: "princeton-logion/logion-bert-base"
     type: "bert"
 
-  - name: "platoBERT"
+  - name: "Plato BERT"
     repo: "princeton-logion/logion-bert-plato"
     type: "bert"
 
