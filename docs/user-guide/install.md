@@ -12,6 +12,8 @@ After you access the Google Drive folder, follow these instructions to download 
 
 1. When the download finishes, go to your **Downloads** folder and double-click the Logion .zip file. This unzips the app into a new folder.
 
-1. Inside the resultant folder, double-click the Logion app to open and install Logion on our system.
+1. Inside the resultant folder, double-click the Logion app to open Logion on your system.
 
-If your institution restricts installation on devices, you may need to contact your IT administrator to temporarily enable installation permissions on your device.
+    - If running on Windows, you may receive saying "Windows Protected Your PC." Click **More info** and then click **Run anyway**.
+
+If your institution restricts installations, you may need to contact your IT administrator to temporarily enable installation permissions on your device.

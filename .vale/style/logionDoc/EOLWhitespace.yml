@@ -1,7 +1,6 @@
 ---
 extends: existence
 message: "Remove whitespace characters from the end of the line '%s'."
-vocab: false
 level: error
 scope: raw
 raw:
