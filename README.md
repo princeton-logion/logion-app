@@ -16,3 +16,16 @@ We hope to make the app available for public download from the [Logion website](
 Logion requires no outside software dependencies.
 
 For more information on Logion's compatibility with your personal computer's hardware, see Logion's [hardware guide](https://princeton-logion.github.io/logion-app/hardware/).
+
+## What Next?
+
+If you're working on a new critical edition of a Greek text and want to use Logion, please contact the Logion team at logion@princeton.edu.
+
+If you want to learn more about Logion, please visit the official project
+[website](https://www.logionproject.princeton.edu/).
+
+## Citation
+
+The software is free to use under the [MIT License](https://opensource.org/licenses/MIT).
+If you use Logion in your work, please use the citation in "Cite this repository" on the right-hand sidebar of this repo.
+

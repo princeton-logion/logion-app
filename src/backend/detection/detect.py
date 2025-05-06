@@ -3,17 +3,18 @@ import numpy as np
 from polyleven import levenshtein
 import logging
 from . import logion_class
+from typing import Callable, Coroutine, Any, Dict, List, Tuple
 
 
 def detection_function(
     text: str,
     model: logion_class.Logion,
-    tokenizer,
-    device,
+    tokenizer: str,
+    device: str,
     chunk_size: int = 500,
     lev: int = 1,
     no_beam=False,
-):
+) -> Tuple[Dict[Tuple[str, float, int], List[Tuple[str, float]]], List[float]]:
     """
     Masked language modeling for detecting and suggesting corrections to potential erroneous words in input text.
     Requires Logion class and .npy matrix.
@@ -94,10 +95,8 @@ def detection_function(
             else:
                 words[-1] = words[-1] + [token_ids[0, 1:-1][i].item()]
 
-        logging.info(f"Word scores: {word_scores}")
-        logging.info(f"Words: {words}")
-        logging.info(f"Number of words: {len(words)}")
-        logging.info(f"Number of word scores: {len(word_scores)}")
+        #logging.info(f"Word scores: {word_scores}\nWords: {words}")
+        logging.info(f"Words in chunk: {len(words)}\nWord scores in chunk: {len(word_scores)}")
 
         all_suggestions = []
         for word_ind, word_score in enumerate(word_scores):
@@ -154,19 +153,15 @@ def detection_function(
             )
             chunk_ccr.append(ccr_value)
 
-        logging.info(f"Chunk Predictions: {chunk_predictions}")
-        logging.info(f"Chunk CCR: {chunk_ccr}")
-        logging.info(f"Length Chunk Predictions: {len(chunk_predictions)}")
-        logging.info(f"Length Chunk CCR: {len(chunk_ccr)}")
+        #logging.info(f"Chunk Predictions: {chunk_predictions}\nChunk CCR: {chunk_ccr}")
+        logging.info(f"Length Chunk Predictions: {len(chunk_predictions)}\nLength Chunk CCR: {len(chunk_ccr)}")
 
         final_predictions.update(chunk_predictions)
         ccr.extend(chunk_ccr)
         # set new chunk start at end of current chunk for next loop
         chunk_start = chunk_end
 
-    logging.info(f"Final Predictions: {final_predictions}")
-    logging.info(f"CCR: {ccr}")
-    logging.info(f"Length Final Predictions: {len(final_predictions)}")
-    logging.info(f"Length CCR: {len(ccr)}")
+    #logging.info(f"Final Predictions: {final_predictions}\nCCR: {ccr}")
+    logging.info(f"Length Final Predictions: {len(final_predictions)}\nLength CCR: {len(ccr)}")
 
     return final_predictions, ccr
