@@ -1,0 +1,34 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Logion
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jacob
+    family-names: Murel
+    email: jm9095@princeton.edu
+    affiliation: Princeton University
+repository-code: 'https://github.com/princeton-logion/logion-app'
+url: 'https://www.logionproject.princeton.edu/'
+repository: 'https://huggingface.co/princeton-logion'
+abstract: >-
+  Logion provides provides a no-code user interface through
+  which researchers may obtain suggestions for common
+  classical philological research tasks, such as text
+  restoration and scribal error detection. In this way,
+  Logion empowers classical philologists to leverage
+  advances in AI to assist their research. Logion runs on
+  personal computers without access to high performance
+  computing (HPC) resources.
+keywords:
+  - language model
+  - digital humanities
+  - philology
+  - classics
+license: MIT
+version: 0.0.0
+date-released: '2025-04-07'

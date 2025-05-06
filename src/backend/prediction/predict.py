@@ -2,6 +2,7 @@ import torch
 from collections import defaultdict
 import logging
 import numpy as np
+from typing import Callable, Coroutine, Any, Dict, List, Tuple
 
 
 def prediction_function(
@@ -12,7 +13,7 @@ def prediction_function(
     window_size: int = 512,
     overlap: int = 128,
     num_predictions: int = 5,
-):
+) -> Dict[int, List[Tuple[str, float]]]:
     """
     Masked language modeling inference for lacuna predictions using sliding window
 
