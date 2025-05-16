@@ -1,99 +1,234 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+// import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import Sidebar from './Sidebar';
-import { OverlayTrigger, Popover } from 'react-bootstrap';
+import { OverlayTrigger, Popover, ProgressBar } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
+import { useWebSocket } from './contexts/WebSocketContext';
 
+// create unique task IDs
+function genID() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+}
 
 function PredictionPage() {
     const [inputText, setInputText] = useState('');
-    const [predictions, setPredictions] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [errorMsg, setErrorMsg] = useState(null);
-    const [successMsg, setSuccessMsg] = useState(null);
-    const [selectedModel, setSelectedModel] = useState('Base BERT');
+    const [selectedModel, setSelectedModel] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const isElectron = !!window.electron;
     const [modelOptions, setModelOptions] = useState([]);
+    const { isConnected, sendMessage, addMessageHandler, removeMessageHandler } = useWebSocket();
+
+    // task state: { id, status, progress, message, results, error }
+    const [currentTask, setCurrentTask] = useState(null);
 
     useEffect(() => {
-      fetch("http://127.0.0.1:8000/models")
-          .then((response) => response.json())
-          .then((data) => setModelOptions(data))
-          .catch((error) => console.error("Unable to fetch models.", error));
-  }, []);
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const handleModelChange = (e) => {
-    setSelectedModel(e.target.value);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
+        fetch("http://127.0.0.1:8000/models")
+            .then((response) => response.json())
+            .then((data) => {
+                setModelOptions(data);
+                if (data && data.length > 0 && !selectedModel) {
+                    setSelectedModel(data[0]);
+                }
+            })
+            .catch((error) => {
+                console.error("Cannot access models:", error);
+            });
+    }, [selectedModel]);
 
 
-// server connection for dev vs Electron testing
-try {
-    if (isElectron) {
-        // Electron IPC
-        const response = await window.electron.ipcRenderer.invoke('predict-request', {
-            text: inputText,
-            model_name: selectedModel
+    // prediction task msg handler
+    const handlePredictMsg = useCallback((message) => {
+        console.log("Received:", message);
+
+        // update state per task ID + msg type
+        setCurrentTask(prevTask => {
+            // only process msg if it matches current task ID
+            if (!prevTask || prevTask.id !== message.task_id) {
+                return prevTask;
+            }
+            switch (message.type) {
+                case 'ack':
+                    return { ...prevTask, status: 'processing'};
+                case 'progress':
+                    return { ...prevTask, status: 'processing', progress: message.percentage, message: message.message };
+                case 'result':
+                    return { ...prevTask, status: 'success', results: message.data, progress: 100};
+                case 'error':
+                    return { ...prevTask, status: 'error', error: message.detail};
+                case 'cancelled':
+                    return { ...prevTask, status: 'cancelled'};
+                default:
+                    console.warn(`Unknown message type: ${message.type}`);
+                    return prevTask;
+            }
         });
+    }, []);
 
-        if (!response || !response.predictions) {
-            throw new Error("Unexpected server response: Missing predictions.");
+
+    // msg handler
+    useEffect(() => {
+        console.log('Initialize message handler.');
+        addMessageHandler(handlePredictMsg);
+
+        return () => {
+            console.log('Deregister message handler.');
+            removeMessageHandler(handlePredictMsg);
+            setCurrentTask(null);
+        };
+    }, [addMessageHandler, removeMessageHandler, handlePredictMsg]);
+
+    // sidebar toggle
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+    
+    // model handler
+    const handleModelChange = (e) => {
+        setSelectedModel(e.target.value);
+    };
+
+    // task handler
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (!isConnected) {
+            console.error("Not connected to server.");
+             setCurrentTask({
+                id: 'submit-error', status: 'error', error: 'Not connected to server.', progress: 0, message: '', results: null
+            });
+            return;
         }
 
-        setPredictions(response.predictions);
-        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
-    } else {
-        // Axios for external API
-        const response = await axios.post(`http://localhost:8000/prediction`, {
-            text: inputText,
-            model_name: selectedModel
-        });
-
-        if (!response.data || !response.data.predictions) {
-            throw new Error("Unexpected server response: Missing predictions.");
+        // check whether task is running
+        if (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing')) {
+            console.warn("Prediction task already in progress.");
+            return;
         }
 
-        setPredictions(response.data.predictions);
-        setSuccessMsg('Εὖγε!<br/>Predictions generated.');
+        // create unique task ID
+        const taskId = genID();
+        const request_data = {
+            model_name: selectedModel,
+            text: inputText,
+        };
+        const message = {
+            type: "start_prediction",
+            task_id: taskId,
+            request_data: request_data,
+        };
+
+        // set task state
+        setCurrentTask({
+            id: taskId,
+            status: 'pending',
+            progress: 0,
+            message: 'Submitting prediction task...',
+            results: null,
+            error: null
+        });
+
+        console.log(`${JSON.stringify(message)}`);
+        sendMessage(message);
+    };
+
+    // cancellation process
+    const handleCancel = () => {
+        if (!currentTask || !isConnected) {
+            console.error("Cancel not available.");
+            return;
+        }
+        if (currentTask.status !== 'processing' && currentTask.status !== 'pending') {
+            console.warn(`Cannot cancel task ${currentTask.id} in state ${currentTask.status}.`);
+            return;
+        }
+        const message = {
+            type: "cancel_task",
+            task_id: currentTask.id,
+        };
+        console.log(`Cancel task ${currentTask.id}...`);
+        sendMessage(message);
+    };
+
+
+     // dynamic render status message
+     const renderStatusMsg = () => {
+      if (!isConnected && (!currentTask || currentTask.status !== 'error')) {
+          return <p className="text-center text-warning mt-3">Lost the oracle.</p>;
+      }
+  
+      if (!currentTask) return null;
+
+      switch (currentTask.status) {
+          case 'processing':
+              return <p className="text-center text-secondary mt-3"> <div className="spinner-border text-secondary spinner-border-sm me-2" role="status"/> {currentTask.message} ({currentTask.progress?.toFixed(1)}%) </p> ;
+          case 'success':
+               return <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: 'Εὖγε!' }}></p>;
+          case 'error':
+              return <p className="text-center text-danger mt-3">λυπούμαι!<br/>{currentTask.error}<br/>Please try again.</p>;
+           case 'cancelled':
+              return <p className="text-center text-danger mt-3">Prediction cancelled.</p>;
+          default:
+              return null;
+      }
+  };
+
+
+  // dynamic render progress bar
+  const lastKnownTask = useRef(null);
+  useEffect(() => {
+    if (currentTask) {
+      lastKnownTask.current = currentTask;
     }
+  }, [currentTask]);
+  
+  let barValue = 0;
+  let barColor = undefined;
+  
+  if (!isConnected && (!currentTask || currentTask.status !== 'error')) {
+    barColor = 'warning';
+  } else if (currentTask) {
+    switch (currentTask.status) {
+        case 'processing':
+            barValue = currentTask.progress;
+            break;
+        case 'success':
+            barValue = 100;
+            barColor = 'success';
+            break;
+        case 'error':
+            barValue = lastKnownTask.current;
+            barColor = 'danger';
+            break;
+         case 'cancelled':
+            barValue = lastKnownTask.current;
+            barColor = 'danger';
+            break;
+    }
+  }
 
 
-} catch (err) {
-    setPredictions([]);
-    setErrorMsg(err.message);
-    console.error("Error:", err);
-} finally {
-    setLoading(false);
-}};
+    // show predictions only once task successful
+    const predictionsToDisplay = currentTask?.status === 'success' ? currentTask.results?.predictions : {};
 
 
-  const isInputValid = inputText.trim() !== '';
-  const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${errorMsg ? 'is-invalid' : ''}`;
-  const isButtonDisabled = !isInputValid;
-  const buttonClass = isButtonDisabled ? 'btn btn-secondary' : 'btn btn-primary';
+    const isInputValid = inputText.trim() !== '';
+    const predictButtonDisabled = !isInputValid || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing'));
+    const cancelButtonEnabled = currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing');
 
-// page main content
-  return (
-    <div>
+    const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${currentTask?.status === 'error' ? 'is-invalid' : ''}`;
+    const predictButtonClass = predictButtonDisabled ? 'btn btn-secondary' : 'btn btn-primary';
+    const cancelButtonClass = 'btn btn-danger ms-3';
 
+
+    return (
+        <div>
       {sidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
-
-      <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
-        <div className='container mt-5'>
-        <div className="d-flex align-items-center mb-4">
+            <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
+                <div className='container mt-5'>
+                <div className="d-flex align-items-center mb-4">
         <button className="btn btn-outline-dark me-auto" onClick={toggleSidebar}>
             ☰ Menu
           </button>
@@ -111,30 +246,40 @@ try {
         </select></div>
 
       </div>
-      <div className="row">
-        <div className="col-md-8">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-            <textarea
-          className={textareaClasses}
-          rows="4"
-          style={{ fontSize: '14px', height: '300px' }}
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder='Enter text with "?" for each missing word'
-        />
-            </div>
-            <div>
-        <button type="submit" className={buttonClass} disabled={isButtonDisabled}>Predict</button>
-      </div>
-          </form>
-          {loading && <p className="text-center text-secondary mt-3"><div className="spinner-border text-secondary me-2" role="status"/>Please wait.<br/>This may take a few seconds.</p>}
-          {errorMsg && <p className="text-center text-danger mt-3">λυπούμαι!<br/>{errorMsg}<br/>Please try again.</p>}
-          {successMsg && <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: successMsg }}></p>}
+                    <div className="row">
+                        <div className="col-md-8">
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-3">
+                                    <textarea
+                                        className={textareaClasses}
+                                        rows="4"
+                                        style={{ fontSize: '14px', height: '300px' }}
+                                        value={inputText}
+                                        onChange={(e) => setInputText(e.target.value)}
+                                        placeholder='Enter text with "?" for each missing word'
+                                    />
+                                </div>
+                                <div>
+                                    <button type="submit" className={predictButtonClass} disabled={predictButtonDisabled}>
+                                        Predict
+                                    </button>
+                                    <button type="button" className={cancelButtonClass} onClick={handleCancel} disabled={!cancelButtonEnabled} >
+                                             Cancel
+                                         </button>
+                                </div>
+                            </form>
+                            <div className="mt-3">
+             <ProgressBar
+                 now={barValue}
+                 variant={barColor}
+                 style={{height: '5px'}}
+             />
         </div>
-        <div className="col-md-4">
+        {renderStatusMsg()}
+                        </div>
+                        <div className="col-md-4">
             <div className="mt-1">
-              {Object.entries(predictions).map(([maskedIndex, prediction]) => (
+              {Object.entries(predictionsToDisplay || {}).map(([maskedIndex, prediction]) => (
                 <div key={maskedIndex}>
                   <h5>Word Position: {maskedIndex}</h5>
                   <table className="table table-striped">
@@ -189,11 +334,11 @@ try {
               ))}
             </div>
         </div>
-      </div>
-    </div>
-    </div>
-    </div>
-  );
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default PredictionPage;

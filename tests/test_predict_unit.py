@@ -1,7 +1,7 @@
 import pytest
 import torch
 from unittest.mock import patch, MagicMock
-from src.backend.prediction import predict
+from src.backend.features import predict
 
 
 """

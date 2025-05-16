@@ -99,13 +99,13 @@ class DetectionResponse(BaseModel):
     ccr: List[CCRResult]
 
     @field_validator("predictions")
-    def predictions_not_null(cls: type, value: list) -> list:
+    def predictions_not_null(cls: type, value: List) -> List:
         if not value:
             raise ValueError("Predictions list cannot be empty.")
         return value
 
     @field_validator("ccr")
-    def ccr_not_null(cls: type, value: list) -> list:
+    def ccr_not_null(cls: type, value: List) -> List:
         if not value:
             raise ValueError("CCR list cannot be empty.")
         return value

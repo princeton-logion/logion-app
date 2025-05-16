@@ -1,6 +1,6 @@
 {
   "name": "logion",
-  "version": "0.0.0",
+  "version": "1.0.1-beta.0",
   "author": "Jacob Murel",
   "license": "MIT",
   "description": "A machine learning tool for Greek philology",
@@ -31,14 +31,18 @@
       {
         "from": "../frontend/build",
         "to": "frontend",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "extraResources": [
       {
         "from": "../backend/dist/",
         "to": "./extraResources/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "directories": {

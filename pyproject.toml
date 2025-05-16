@@ -6,8 +6,8 @@ requires = [
 ]
 
 [project]
-name = "logion"
-version = "0.0.0"
+name = "Logion"
+version = "1.0.1-beta.0"
 description = "A no-code language-modeling tool for Greek philology"
 readme = "README.md"
 license = {file = "LICENSE"}
