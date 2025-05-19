@@ -31,7 +31,7 @@ extra_javascript:
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
 nav:
-    - 'Home': '_index.md'
+    - 'Home': 'index.md'
     - 'About Hardware': 'hardware.md'
     - 'User Guide':
       - 'Overview': 'user-guide/_index.md'
