@@ -45,12 +45,12 @@ function MainPage() {
       )}
       <h5 className='p-5'>Welcome to Logion, a tool to aid philological research of premodern Greek texts.</h5>
 
-      <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8em' }}>
+      {/*<div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8em' }}>
           Status: {isConnected
             ? <span className="badge bg-success">Connected</span>
             : <span className="badge bg-danger">Disconnected</span>
           }
-      </div>
+      </div>*/}
 
       <Link to="/prediction" className="btn btn-pill">Word Prediction</Link>
 

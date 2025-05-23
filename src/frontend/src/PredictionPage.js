@@ -6,13 +6,13 @@ import Sidebar from './Sidebar';
 import { OverlayTrigger, Popover, ProgressBar } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
 import { useWebSocket } from './contexts/WebSocketContext';
+import { renderStatusMsg } from './utils/statusMsgHandler';
+import { handleTaskSubmit, handleTaskCancel } from './utils/taskUtils'
+import { processWsMsg } from './utils/wsMsgUtils'
+import PredictionPopover from './components/popOvers/PredictionPopover'
+import ProbabilityPopover from './components/popOvers/ProbabilityPopover'
 
-// create unique task IDs
-function genID() {
-    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-    );
-}
+
 
 function PredictionPage() {
     const [inputText, setInputText] = useState('');
@@ -20,9 +20,8 @@ function PredictionPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [modelOptions, setModelOptions] = useState([]);
     const { isConnected, sendMessage, addMessageHandler, removeMessageHandler } = useWebSocket();
-
-    // task state: { id, status, progress, message, results, error }
     const [currentTask, setCurrentTask] = useState(null);
+    // task state: { id, status, progress, message, results, error, statusCode }
 
     useEffect(() => {
         fetch("http://127.0.0.1:8000/models")
@@ -39,46 +38,23 @@ function PredictionPage() {
     }, [selectedModel]);
 
 
-    // prediction task msg handler
-    const handlePredictMsg = useCallback((message) => {
-        console.log("Received:", message);
-
-        // update state per task ID + msg type
-        setCurrentTask(prevTask => {
-            // only process msg if it matches current task ID
-            if (!prevTask || prevTask.id !== message.task_id) {
-                return prevTask;
-            }
-            switch (message.type) {
-                case 'ack':
-                    return { ...prevTask, status: 'processing'};
-                case 'progress':
-                    return { ...prevTask, status: 'processing', progress: message.percentage, message: message.message };
-                case 'result':
-                    return { ...prevTask, status: 'success', results: message.data, progress: 100};
-                case 'error':
-                    return { ...prevTask, status: 'error', error: message.detail};
-                case 'cancelled':
-                    return { ...prevTask, status: 'cancelled'};
-                default:
-                    console.warn(`Unknown message type: ${message.type}`);
-                    return prevTask;
-            }
-        });
-    }, []);
+    // WebSocket task msg handler
+    const handleWsMsg = useCallback((message) => {
+        processWsMsg(message, setCurrentTask);
+    }, [setCurrentTask]);
 
 
     // msg handler
     useEffect(() => {
-        console.log('Initialize message handler.');
-        addMessageHandler(handlePredictMsg);
+        console.log('Register WebSocket message handler.');
+        addMessageHandler(handleWsMsg);
 
         return () => {
-            console.log('Deregister message handler.');
-            removeMessageHandler(handlePredictMsg);
+            console.log('Deregister WebSocket message handler.');
+            removeMessageHandler(handleWsMsg);
             setCurrentTask(null);
         };
-    }, [addMessageHandler, removeMessageHandler, handlePredictMsg]);
+    }, [addMessageHandler, removeMessageHandler, handleWsMsg]);
 
     // sidebar toggle
     const toggleSidebar = () => {
@@ -86,129 +62,71 @@ function PredictionPage() {
     };
     
     // model handler
-    const handleModelChange = (e) => {
-        setSelectedModel(e.target.value);
+    const handleModelChange = (event) => {
+        setSelectedModel(event.target.value);
     };
 
-    // task handler
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        if (!isConnected) {
-            console.error("Not connected to server.");
-             setCurrentTask({
-                id: 'submit-error', status: 'error', error: 'Not connected to server.', progress: 0, message: '', results: null
-            });
-            return;
-        }
-
-        // check whether task is running
-        if (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing')) {
-            console.warn("Prediction task already in progress.");
-            return;
-        }
-
-        // create unique task ID
-        const taskId = genID();
-        const request_data = {
-            model_name: selectedModel,
-            text: inputText,
-        };
-        const message = {
-            type: "start_prediction",
-            task_id: taskId,
-            request_data: request_data,
+    const taskSubmit = (event) => {
+        const predictionOptions = {
+            taskType: "prediction",
+            requestData: {
+                model_name: selectedModel,
+                text: inputText,
+            },
+            pendingMessage: "Submitting word prediction task...",
+            taskInProgressMessage: "Word prediction task already in progress."
         };
 
-        // set task state
-        setCurrentTask({
-            id: taskId,
-            status: 'pending',
-            progress: 0,
-            message: 'Submitting prediction task...',
-            results: null,
-            error: null
-        });
-
-        console.log(`${JSON.stringify(message)}`);
-        sendMessage(message);
+        handleTaskSubmit(
+            event,
+            predictionOptions,
+            isConnected,
+            currentTask,
+            setCurrentTask,
+            sendMessage
+        );
     };
 
-    // cancellation process
-    const handleCancel = () => {
-        if (!currentTask || !isConnected) {
-            console.error("Cancel not available.");
-            return;
-        }
-        if (currentTask.status !== 'processing' && currentTask.status !== 'pending') {
-            console.warn(`Cannot cancel task ${currentTask.id} in state ${currentTask.status}.`);
-            return;
-        }
-        const message = {
-            type: "cancel_task",
-            task_id: currentTask.id,
-        };
-        console.log(`Cancel task ${currentTask.id}...`);
-        sendMessage(message);
+    const taskCancel = () => {
+        handleTaskCancel(sendMessage, isConnected, currentTask);
     };
 
 
-     // dynamic render status message
-     const renderStatusMsg = () => {
-      if (!isConnected && (!currentTask || currentTask.status !== 'error')) {
-          return <p className="text-center text-warning mt-3">Lost the oracle.</p>;
+
+
+    // dynamic render progress bar
+    const lastKnownTask = useRef(null);
+    useEffect(() => {
+      if (currentTask) {
+        lastKnownTask.current = currentTask;
       }
-  
-      if (!currentTask) return null;
-
+    }, [currentTask]);
+    
+    let barValue = 0;
+    let barColor = undefined;
+    
+    if (!isConnected && (!currentTask || currentTask.status !== 'error')) {
+      barColor = 'warning';
+    } else if (currentTask) {
       switch (currentTask.status) {
           case 'processing':
-              return <p className="text-center text-secondary mt-3"> <div className="spinner-border text-secondary spinner-border-sm me-2" role="status"/> {currentTask.message} ({currentTask.progress?.toFixed(1)}%) </p> ;
+              barValue = currentTask.progress;
+              break;
           case 'success':
-               return <p className="text-center text-success mt-3" dangerouslySetInnerHTML={{ __html: 'Εὖγε!' }}></p>;
+              barValue = 100;
+              barColor = 'success';
+              break;
           case 'error':
-              return <p className="text-center text-danger mt-3">λυπούμαι!<br/>{currentTask.error}<br/>Please try again.</p>;
+              barValue = lastKnownTask.current;
+              barColor = 'danger';
+              break;
            case 'cancelled':
-              return <p className="text-center text-danger mt-3">Prediction cancelled.</p>;
-          default:
-              return null;
+              barValue = lastKnownTask.current;
+              barColor = 'danger';
+              break;
       }
-  };
-
-
-  // dynamic render progress bar
-  const lastKnownTask = useRef(null);
-  useEffect(() => {
-    if (currentTask) {
-      lastKnownTask.current = currentTask;
     }
-  }, [currentTask]);
   
-  let barValue = 0;
-  let barColor = undefined;
-  
-  if (!isConnected && (!currentTask || currentTask.status !== 'error')) {
-    barColor = 'warning';
-  } else if (currentTask) {
-    switch (currentTask.status) {
-        case 'processing':
-            barValue = currentTask.progress;
-            break;
-        case 'success':
-            barValue = 100;
-            barColor = 'success';
-            break;
-        case 'error':
-            barValue = lastKnownTask.current;
-            barColor = 'danger';
-            break;
-         case 'cancelled':
-            barValue = lastKnownTask.current;
-            barColor = 'danger';
-            break;
-    }
-  }
-
 
     // show predictions only once task successful
     const predictionsToDisplay = currentTask?.status === 'success' ? currentTask.results?.predictions : {};
@@ -223,6 +141,7 @@ function PredictionPage() {
     const cancelButtonClass = 'btn btn-danger ms-3';
 
 
+// page main content
     return (
         <div>
       {sidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
@@ -248,7 +167,7 @@ function PredictionPage() {
       </div>
                     <div className="row">
                         <div className="col-md-8">
-                            <form onSubmit={handleSubmit}>
+                            <form onSubmit={taskSubmit}>
                                 <div className="mb-3">
                                     <textarea
                                         className={textareaClasses}
@@ -263,7 +182,7 @@ function PredictionPage() {
                                     <button type="submit" className={predictButtonClass} disabled={predictButtonDisabled}>
                                         Predict
                                     </button>
-                                    <button type="button" className={cancelButtonClass} onClick={handleCancel} disabled={!cancelButtonEnabled} >
+                                    <button type="button" className={cancelButtonClass} onClick={taskCancel} disabled={!cancelButtonEnabled} >
                                              Cancel
                                          </button>
                                 </div>
@@ -275,7 +194,7 @@ function PredictionPage() {
                  style={{height: '5px'}}
              />
         </div>
-        {renderStatusMsg()}
+        {renderStatusMsg(isConnected, currentTask)}
                         </div>
                         <div className="col-md-4">
             <div className="mt-1">
@@ -286,38 +205,18 @@ function PredictionPage() {
                     <thead>
                       <tr>
                         <th>Prediction
-                        <OverlayTrigger
-                           trigger="click"
-                           overlay={
-                             <Popover id={`popover-probability`}>
-                               <Popover.Header as="h3">About predictions</Popover.Header>
-                               <Popover.Body>
-                                All Logion predictions lack diacritics.
-                               </Popover.Body>
-                             </Popover>
-                           }
-                           >
+                        <PredictionPopover>
                             <sup>
                          <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
                          </sup>
-                       </OverlayTrigger>
+                       </PredictionPopover>
                         </th>
                         <th>Probability
-                        <OverlayTrigger
-                            trigger="click"
-                            overlay={
-                              <Popover id={`popover-probability`}>
-                                <Popover.Header as="h3">What is probability?</Popover.Header>
-                                <Popover.Body>
-                                The model's predicted likelihood a word appears in the given context.
-                                </Popover.Body>
-                              </Popover>
-                            }
-                            >
+                        <ProbabilityPopover>
                              <sup>
                           <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
                           </sup>
-                        </OverlayTrigger>
+                        </ProbabilityPopover>
                         </th>
                       </tr>
                     </thead>

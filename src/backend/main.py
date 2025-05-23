@@ -197,7 +197,8 @@ async def run_prediction_task(
             (m for m in MODEL_CONFIG if m["name"] == frontend_selection), None
         )
         if not model_info:
-             raise ValueError(f"{frontend_selection} model unavailable.")
+            logging.warning(f"Task {task_id}: Unable to load {frontend_selection}")
+            raise HTTPException(status_code=422, detail=f"{frontend_selection} not available.")
         
         # load model from HF Hub to device via config
         await progress_callback(5.0, f"Loading {frontend_selection} model")
@@ -293,7 +294,8 @@ async def run_detection_task(
             (m for m in MODEL_CONFIG if m["name"] == frontend_selection), None
         )
         if not model_info:
-            raise ValueError(f"{frontend_selection} model not available.")
+            logging.warning(f"Task {task_id}: Unable to load {frontend_selection}")
+            raise HTTPException(status_code=422, detail=f"{frontend_selection} not available.")
         
         # load model from HF Hub to device via conifg
         await progress_callback(5.0, f"Loading {frontend_selection} model")
@@ -316,7 +318,8 @@ async def run_detection_task(
 
         lev_filter_url = LEV_FILTER_URLS.get(f"lev{lev_distance}")
         if not lev_filter_url:
-            raise ValueError(f"Unable to find URL for Lev filter {lev_distance}.")
+            logging.warning(f"Task {task_id}: Unable to load URL for Lev filter {lev_distance}")
+            raise HTTPException(status_code=422, detail=f"{lev_distance} not an available Levenshtein distance.")
 
         try:
             lev_filter = filter_loader(lev_filter_url)
@@ -424,9 +427,17 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         # validate against pydantic schema
                         request = prediction_schemas.PredictionRequest(**request_data)
                     except pydantic.ValidationError as e:
-                         logging.info(f"Task {task_id}: Invalid word prediction request data: {e}")
-                         await send_message(websocket, {"type": "error", "task_id": task_id, "detail": f"Invalid request_data: {e}"})
-                         continue
+                        logging.info(f"Task {task_id}: Invalid word prediction request data: {e}")
+                        await send_message(
+                            websocket, 
+                            ws_schemas.ServerErrorMsg(
+                                type="error", 
+                                task_id=task_id, 
+                                detail=f"Invalid request data: {str(e)}",
+                                status_code=422
+                            ).dict()
+                        )
+                        continue
 
                     await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Word prediction task received").dict())
 
@@ -458,16 +469,24 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         # validate against pydantic schema
                         request = detection_schemas.DetectionRequest(**request_data)
                     except pydantic.ValidationError as e:
-                         logging.info(f"Task {task_id}: Invalid error detection request data: {e}")
-                         await send_message(websocket, {"type": "error", "task_id": task_id, "detail": f"Invalid request_data: {e}"})
-                         continue
+                        logging.info(f"Task {task_id}: Invalid error detection request data: {e}")
+                        await send_message(
+                            websocket, 
+                            ws_schemas.ServerErrorMsg(
+                                type="error", 
+                                task_id=task_id, 
+                                detail=f"Invalid request data: {str(e)}",
+                                status_code=422
+                            ).dict()
+                        )
+                        continue
 
                     await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Error detection task received").dict())
 
                     cancellation_event = asyncio.Event()
 
                     async def progress_callback(percentage: float, message: str):
-                         await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
+                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
 
                     task = asyncio.create_task(
                         run_detection_task(request, task_id, progress_callback, cancellation_event)
@@ -494,7 +513,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         await send_message(websocket, {"type": "error", "task_id": task_id, "detail": "Task ID unknown or already complete."})
                 
 
-                # UNK msgs handled by pydantic, but in case
+                # UNK msgs handled by pydantic, but fallback
                 else:
                     logging.info(f"User {user_id}: Unknown message type: {message_type}")
                     await send_message(websocket, {"type": "error", "task_id": task_id, "detail": f"Unknown message type: {message_type}"})
@@ -525,7 +544,7 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
     """
     
     """
-     # clean even though WebSocket disconnects
+    # clean when WebSocket disconnects
     if task_id in active_tasks:
         del active_tasks[task_id]
         logging.info(f"Task {task_id}: Removed from active tasks")
@@ -537,11 +556,24 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
 
         elif task.exception():
             exc = task.exception()
-            logging.info(f"Task {task_id}: Error: {exc}")
-            error_detail = f"Task failed: {exc}"
+            logging.info(f"Task {task_id} error: {exc}")
+            error_detail = f"Task {task_id} failed: {exc}"
+            status_code = 500
+
             if isinstance(exc, HTTPException):
                  error_detail = exc.detail
-            asyncio.create_task(send_message(websocket, ws_schemas.ServerErrorMsg(type="error", task_id=task_id, detail=error_detail).dict()))
+                 status_code = exc.status_code
+            asyncio.create_task(
+                send_message(
+                    websocket, 
+                    ws_schemas.ServerErrorMsg(
+                        type="error", 
+                        task_id=task_id, 
+                        detail=error_detail, 
+                        status_code=status_code
+                    ).dict()
+                )
+            )
 
         else:
             result = task.result()
@@ -554,8 +586,8 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
                  asyncio.create_task(send_message(websocket, ws_schemas.ServerResultMsg(type="result", task_id=task_id, data=result).dict()))
 
     except Exception as e:
-        logging.info(f"Task {task_id}: Error in task handler: {e}")
-        asyncio.create_task(send_message(websocket, ws_schemas.ServerErrorMsg(type="error", task_id=task_id, detail=f"Error handling task").dict()))
+        logging.info(f"Task handler error for {task_id}: {e}")
+        asyncio.create_task(send_message(websocket, ws_schemas.ServerErrorMsg(type="error", task_id=task_id, detail=f"Task handler internal error", status_code=500).dict()))
 
 
 
@@ -580,14 +612,14 @@ async def get_models():
         logging.info("Unable to access MODEL_CONFIG in /models endpoint.")
         raise HTTPException(
             status_code=503,
-            detail="Model configurations not available."
+            detail="Model configurations currently unavailable."
         )
     try:
         model_names = [model["name"] for model in MODEL_CONFIG]
         return model_names
     except Exception as e:
         logging.info(f"Unexpected error in /models endpoint: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error during model list retrieval.")
+        raise HTTPException(status_code=500, detail="Unable to access models.")
 
 
 if __name__ == "__main__":

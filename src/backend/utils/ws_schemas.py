@@ -1,4 +1,4 @@
-from typing import Dict, Any, Type, Literal
+from typing import Dict, Any, Type, Literal, Optional
 from pydantic import BaseModel, field_validator
 import uuid 
 
@@ -80,6 +80,7 @@ class ServerResultMsg(BaseMsg):
 class ServerErrorMsg(BaseMsg):
     type: Literal["error"] = "error"
     detail: str
+    status_code: Optional[int] = None
 
     @field_validator("detail")
     def detail_not_null(cls: Type['ServerErrorMsg'], value: str) -> str:
