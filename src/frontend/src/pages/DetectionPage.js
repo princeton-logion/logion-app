@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
-import Sidebar from './Sidebar';
+import '../App.css';
+import Sidebar from '../components/Sidebar';
 import { OverlayTrigger, Popover, ProgressBar } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
-import { useWebSocket } from './contexts/WebSocketContext';
-import { renderStatusMsg } from './utils/statusMsgHandler';
-import { handleTaskSubmit, handleTaskCancel } from './utils/taskUtils'
-import { processWsMsg } from './utils/wsMsgUtils'
-import DetectionResultsDisplay from './components/DetectionResultsDisplay';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { renderStatusMsg } from '../utils/statusMsgHandler';
+import { handleTaskSubmit, handleTaskCancel } from '../utils/taskUtils'
+import { processWsMsg } from '../utils/wsMsgUtils'
+import DetectionResultsDisplay from '../components/DetectionResultsDisplay';
+import LevDistPopover from '../components/popOvers/LevDistPopover'
 
 function DetectionPage() {
     const [inputText, setInputText] = useState('');
@@ -67,10 +68,6 @@ function DetectionPage() {
             setCurrentTask(null);
         };
     }, [addMessageHandler, removeMessageHandler, handleWsMsg]);
-
-
-    
-
 
    const taskSubmit = (event) => {
         const detectionOptions = {
@@ -159,22 +156,11 @@ function DetectionPage() {
                                 {modelOptions.map((model, index) => (<option key={index} value={model}>{model}</option>))}
                             </select>
                         </div>
-                        <div className='ms-3'><p className='inline-label'>Levenshtein distance: <OverlayTrigger
-                           trigger="click"
-                           placement="bottom"
-                           overlay={
-                             <Popover id={`popover-probability-levdist`}>
-                               <Popover.Header as="h3">What is Levenshtein distance?</Popover.Header>
-                               <Popover.Body>
-                               The minimum number of edits required to transform one word into another.
-                               </Popover.Body>
-                             </Popover>
-                           }
-                           >
+                        <div className='ms-3'><p className='inline-label'>Levenshtein distance: <LevDistPopover>
                             <sup>
-                         <i className="fas fa-info-circle" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
+                         <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
                          </sup>
-                       </OverlayTrigger></p>
+                       </LevDistPopover></p>
                             <select className="form-select lev-distance-select" value={selectedLevDist} onChange={handleLevDistChange}>
                                 {levDistOptions.map((dist) => (<option key={dist} value={dist}>{dist}</option>))}
                             </select>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { useWebSocket } from './contexts/WebSocketContext';
+import { useWebSocket } from '../contexts/WebSocketContext';
 
 
 function MainPage() {

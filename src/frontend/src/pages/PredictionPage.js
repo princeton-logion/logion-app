@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
-import Sidebar from './Sidebar';
+import '../App.css';
+import Sidebar from '../components/Sidebar';
 import { OverlayTrigger, Popover, ProgressBar } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.css';
-import { useWebSocket } from './contexts/WebSocketContext';
-import { renderStatusMsg } from './utils/statusMsgHandler';
-import { handleTaskSubmit, handleTaskCancel } from './utils/taskUtils'
-import { processWsMsg } from './utils/wsMsgUtils'
-import PredictionPopover from './components/popOvers/PredictionPopover'
-import ProbabilityPopover from './components/popOvers/ProbabilityPopover'
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { renderStatusMsg } from '../utils/statusMsgHandler';
+import { handleTaskSubmit, handleTaskCancel } from '../utils/taskUtils'
+import { processWsMsg } from '../utils/wsMsgUtils'
+import PredictionPopover from '../components/popOvers/PredictionPopover'
+import ProbabilityPopover from '../components/popOvers/ProbabilityPopover'
 
 
 
@@ -90,9 +90,7 @@ function PredictionPage() {
     const taskCancel = () => {
         handleTaskCancel(sendMessage, isConnected, currentTask);
     };
-
-
-
+    
 
     // dynamic render progress bar
     const lastKnownTask = useRef(null);

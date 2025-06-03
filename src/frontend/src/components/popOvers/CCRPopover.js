@@ -6,7 +6,7 @@ const CCRPopover = ({ children, placement = "top", trigger = "click", popoverId 
         <Popover id={popoverId}>
             <Popover.Header as="h3">What is CCR?</Popover.Header>
             <Popover.Body>
-                The chance-confidence score measures the probability a word is a mistranscription. A lower score suggests higher error probability.
+                The chance-confidence score measures the probability a word is a mistranscription. A lower score suggests higher error probability. See{' '}<a href="https://princeton-logion.github.io/logion-app/explainers/ccr/" target="_blank" rel="noopener noreferrer"> Logion's documentation</a>{' '}for more.
             </Popover.Body>
         </Popover>
     );
