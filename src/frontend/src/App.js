@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import MainPage from './MainPage';
-import PredictionPage from './PredictionPage';
-import DetectionPage from './DetectionPage';
-import Sidebar from './Sidebar';
+import MainPage from './pages/MainPage';
+import PredictionPage from './pages/PredictionPage';
+import DetectionPage from './pages/DetectionPage';
+import Sidebar from './components/Sidebar';
+import { WebSocketProvider } from './contexts/WebSocketContext';
+import './App.css';
 
 
 function App() {
@@ -15,6 +17,7 @@ function App() {
   };
 
   return (
+    <WebSocketProvider>
     <Router>
       <div className="App">
         <Sidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
@@ -27,6 +30,7 @@ function App() {
         </div>
       </div>
     </Router>
+    </WebSocketProvider>
   );
 }
 

@@ -21,6 +21,8 @@ theme:
     - navigation.tabs
     - navigation.sections
     - navigation.footer
+  plugins:
+    - search
 markdown_extensions:
   - pymdownx.arithmatex:
       generic: true

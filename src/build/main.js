@@ -41,11 +41,17 @@ function createMainWindow() {
         height: 650,
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js')
         },
     });
 
-    mainWindow.loadURL(`file://${path.join(__dirname, 'frontend', 'index.html')}`);
+    const startupURL = process.env.NODE_ENV === 'development'
+        ? 'http://localhost:8000'  // dev
+        : `file://${path.join(__dirname, 'frontend', 'index.html')}`; // prod
+
+    log.info(`[createMainWindow] Loading URL: ${startupURL}`);
+        mainWindow.loadURL(startupURL);
 
     mainWindow.webContents.on('did-finish-load', () => {
         log.info('Main app window loaded');
@@ -66,7 +72,7 @@ function startBackend() {
     const isDev = process.env.NODE_ENV === 'development';
 
     if (isDev) {
-        backendPath = '/Users/jm9095/logion-app/src/backend/dist/main';
+        backendPath = '/Users/jm9095/logion-app-websocket/src/backend/dist/main';
         if (process.platform === 'win32') {
             backendPath += '.exe';
         }
@@ -100,7 +106,7 @@ function startBackend() {
     }
 
     backendProcess.on('spawn', () => {
-        log.info('Backend API has spawned.');
+        log.info('Backend API spawned.');
     });
 
     backendProcess.on('error', (err) => {
@@ -131,15 +137,15 @@ async function wait4ServerReady() {
         try {
             const response = await axios.get(healthEndpoint);
             if (response.status === 200) {
-                log.info('API server ready.');
+                log.info('Server ready.');
                 return true;
             }
         } catch (error) {
-            log.info('Awaiting API server...');
+            log.info('Awaiting server...');
         }
         await new Promise(resolve => setTimeout(resolve, retryInterval));
     }
-    log.error('Unable to spawn API server within timeout period.');
+    log.error('Unable to spawn server within timeout period.');
     return false;
 }
 
@@ -162,25 +168,5 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
-    }
-});
-
-// word prediction page
-ipcMain.handle('predict-request', async (event, requestData) => {
-    try {
-        const response = await axios.post('http://127.0.0.1:8000/prediction', requestData);
-        return response.data;
-    } catch (error) {
-        log.error("Unable to process predict-request IPC:", error);
-    }
-});
-
-// error detection page
-ipcMain.handle('detect-request', async (event, requestData) => {
-    try {
-        const response = await axios.post('http://127.0.0.1:8000/detection', requestData);
-        return response.data;
-    } catch (error) {
-        log.error("Unable to process detect-request IPC:", error);
     }
 });

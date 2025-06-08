@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Annotated
+from typing import Dict, List, Annotated
 
 
 """
@@ -62,11 +62,11 @@ class MaskedIndexPredictions(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    predictions: dict[int, MaskedIndexPredictions]
+    predictions: Dict[int, MaskedIndexPredictions]
 
     @field_validator("predictions")
-    def validate_predictions(cls: type, predictions: dict) -> dict:
-        if not isinstance(predictions, dict):
+    def validate_predictions(cls: type, predictions: Dict) -> Dict:
+        if not isinstance(predictions, Dict):
             raise ValueError(
                 "Mask token predictions must be organized as a dictionary."
             )

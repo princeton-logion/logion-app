@@ -10,7 +10,7 @@ exports.default = async function(context) {
   const appPath = context.appOutDir + '/' + context.packager.appInfo.productFilename + '.app';
   const identity = appleID;
   const keychain = keychainPath;
-  const entitlementsPath = 'path/to/entitlements'
+  const entitlementsPath = './entitlements.mac.plist'
 
   const signOpts = {
     app: appPath,

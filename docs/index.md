@@ -7,9 +7,9 @@ personal computers without access to high performance computing (HPC) resources.
 ## Installation
 Logion runs on both Windows and MacOS.
 
-We hope make the app publicly available for download through our website soon.
+Logion is currently in user testing phase. We hope make the app publicly available for download through our website soon.
 
-For those with access to the project's private Google Drive:
+For collaborator's with access to the project's private Dropbox:
 see the [installation guide](./user-guide/install.md) to install Logion on your device.
 
 ## Requirements
