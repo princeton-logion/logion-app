@@ -1,14 +1,12 @@
 import os
 import sys
 import logging
-import requests
-import io
-import yaml
 import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from models import model_loader
+from fastapi.staticfiles import StaticFiles
+from models import model_loader, lev_filter_loader, resource_config_loader
 from utils import prediction_schemas, detection_schemas, ws_schemas
 from features import predict, detect, logion_class, cancel
 import random
@@ -31,14 +29,19 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # set up log
-log_file_path = os.environ.get("LOGION_LOG_PATH", "logion-app.log")
+""" log_file_path = os.environ.get("LOGION_LOG_PATH", "logion-app.log")
 logging.basicConfig(
     filename=log_file_path,
     level="INFO",
     format="%(asctime)s - %(filename)s - %(lineno)d - %(message)s",
+) """
+logging.basicConfig(
+    level="INFO",
+    format="%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s",
+    stream=sys.stdout
 )
 
-app = FastAPI(title="Logion", port=8000)
+app = FastAPI(title="Logion")
 
 # CORS middleware
 app.add_middleware(
@@ -58,37 +61,19 @@ active_tasks: Dict[str, tuple[asyncio.Task, asyncio.Event]] = {}
 """
 Remote resource handling
 """
-RESOURCES_URL = "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/backend/resources_config.yaml"
-MODEL_CONFIG = []
-LEV_FILTER_URLS = {}
+RESOURCES_CONFIG = "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/resources/resources_config.yaml"
+#RESOURCES_CONFIG = os.environ.get("LOGION_RESOURCES_CONFIG")
+if not RESOURCES_CONFIG:
+    logging.info("LOGION_RESOURCES_CONFIG env variable not set.")
+    sys.exit(1)
+else:
+    logging.info(f"LOGION_RESOURCES_CONFIG env variable: {RESOURCES_CONFIG}")
 
-def resource_loader(url: str) -> Dict:
-    """
-    Loads model config .yaml file file from url
 
-    Parameters:
-        url (str) -- url to Git-hosted resources_config.yaml
+MODELS_CONFIG = []
+LEV_CONFIG_ENTRY = {}
 
-    Returns:
-        response.text -- url string from resources_config.yaml
-    """
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return yaml.safe_load(response.text)
-    except requests.exceptions.RequestException as e:
-        logging.info(f"Unable to load remote resources_config.yaml: {e}. Trying local.")
-    # if URL fails, load local .yaml
-    try:
-        local_path = os.path.join(
-            getattr(sys, "_MEIPASS", os.path.dirname(__file__)),
-            "resources_config.yaml"
-        )
-        with open(local_path, "r") as file:
-            return yaml.safe_load(file)
-    except Exception as e_local:
-        logging.info(f"Unable to load local resources_config.yaml: {e_local}")
-        raise
+
 
 
 @app.on_event("startup")
@@ -97,10 +82,10 @@ async def load_app_config():
     Load resources_config.yaml on app startup.
     If .yaml is ill-formed or inaccessible, exit app.
     """
-    global MODEL_CONFIG, LEV_FILTER_URLS
+    global MODELS_CONFIG, LEV_CONFIG_ENTRY
     logging.info("Retrieving resources")
     try:
-        config_data = resource_loader(RESOURCES_URL)
+        config_data = resource_config_loader.load_resource_config(RESOURCES_CONFIG)
 
         if not config_data:
             logging.info("Unable to access resources_config.yaml")
@@ -108,46 +93,18 @@ async def load_app_config():
 
         if "models" and "lev_filter" not in config_data:
             logging.info("Ill-formed resources_config.yaml")
-            raise SystemExit("No resources . Exiting app.")
+            raise SystemExit("No resources available. Exiting app.")
 
-        MODEL_CONFIG = config_data["models"]
-        LEV_FILTER_URLS = config_data["lev_filter"]
-        logging.info("Successfully loaded resources via config")
+        MODELS_CONFIG = config_data["models"]
+        LEV_CONFIG_ENTRY = config_data["lev_filter"]
+        logging.info(f"Successfully loaded resources from {RESOURCES_CONFIG}")
 
     except Exception as e:
-        logging.info(f"Unable to load app resources at startup: {e}")
+        logging.info(f"Unable to load external resources at startup: {e}")
         raise SystemExit(f"No resources available. Exiting app.")
 
 
-def filter_loader(url: str) -> torch.tensor:
-    """
-    Loads Levenshtein filter matrix .npy file from url
 
-    Parameters:
-        url (str) -- url to HF-hosted .npy file
-
-    Returns:
-        torch.tensor -- filter matrix as torch tensor
-    """
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        lev_matrix_file = io.BytesIO(response.content)
-        logging.info(f"Loaded Lev filter from URL: {url}")
-        return torch.tensor(np.load(lev_matrix_file))
-    except requests.exceptions.RequestException as e:
-        logging.info(f"Unable to load remote Lev filter from {url}: {e}")
-    # if URL fails, load local file
-    try:
-        if hasattr(sys, "_MEIPASS"):
-            local_path = os.path.join(sys._MEIPASS, "lev_filter.npy")
-        else:
-            local_path = os.path.join(os.path.dirname(__file__), "lev_filter.npy")
-        with open(local_path, "rb") as file:
-            return torch.tensor(np.load(file))
-    except Exception as e:
-        logging.info(f"Unable to load local Lev filter: {e}")
-        raise
 
 
 async def send_message(websocket: WebSocket, message: Dict[str, Any]) -> None:
@@ -194,7 +151,7 @@ async def run_prediction_task(
         # receive model name from front-end and retrieve via model_config file
         frontend_selection = request_data.model_name
         model_info = next(
-            (m for m in MODEL_CONFIG if m["name"] == frontend_selection), None
+            (m for m in MODELS_CONFIG if m["name"] == frontend_selection), None
         )
         if not model_info:
             logging.warning(f"Task {task_id}: Unable to load {frontend_selection}")
@@ -204,11 +161,12 @@ async def run_prediction_task(
         await progress_callback(5.0, f"Loading {frontend_selection} model")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
-        model_name = model_info["repo"]
+        model_name = model_info["model_path"]
         model_type = model_info["type"]
+        tokenizer_path = model_info["tokenizer_path"]
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type)
+            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
@@ -274,7 +232,7 @@ async def run_detection_task(
         - Loads model/tokenizer
         - Loads Lev filter matrix
         - Creates Logion class from resources
-        - Passese items from DetectionRequest to detection_function()
+        - Passes items from DetectionRequest to detection_function()
         - Format detection_function() results for front-end
         - Account for zero-value CCR scores
     
@@ -291,7 +249,7 @@ async def run_detection_task(
         # receive model name from front-end and retrieve via model_config file
         frontend_selection = request_data.model_name
         model_info = next(
-            (m for m in MODEL_CONFIG if m["name"] == frontend_selection), None
+            (m for m in MODELS_CONFIG if m["name"] == frontend_selection), None
         )
         if not model_info:
             logging.warning(f"Task {task_id}: Unable to load {frontend_selection}")
@@ -301,12 +259,13 @@ async def run_detection_task(
         await progress_callback(5.0, f"Loading {frontend_selection} model")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
-        model_name = model_info["repo"]
+        model_name = model_info["model_path"]
         model_type = model_info["type"]
+        tokenizer_path = model_info["tokenizer_path"]
         lev_distance = request_data.lev_distance
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type)
+            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
@@ -316,13 +275,14 @@ async def run_detection_task(
         await progress_callback(10.0, f"Loading Levenshtein filter {lev_distance}")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
-        lev_filter_url = LEV_FILTER_URLS.get(f"lev{lev_distance}")
-        if not lev_filter_url:
-            logging.warning(f"Task {task_id}: Unable to load URL for Lev filter {lev_distance}")
+        lev_filter_path = LEV_CONFIG_ENTRY.get(f"lev{lev_distance}")
+        if not lev_filter_path:
+            logging.info(f"Task {task_id}: Unable to load URL for Lev filter {lev_distance}")
             raise HTTPException(status_code=422, detail=f"{lev_distance} not an available Levenshtein distance.")
 
         try:
-            lev_filter = filter_loader(lev_filter_url)
+            logging.info(f"Lev {lev_distance} URL: {lev_filter_path}")
+            lev_filter = lev_filter_loader.load_filter(lev_filter_path)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load Lev filter: {e}")
             raise HTTPException(status_code=500, detail="Unable to load Levenshtein filter.") from e
@@ -608,19 +568,32 @@ async def get_models():
     Returns list of available model names loaded at startup.
     To load list from updated resources_config.yaml, restart app.
     """
-    if not MODEL_CONFIG:
-        logging.info("Unable to access MODEL_CONFIG in /models endpoint.")
+    if not MODELS_CONFIG:
+        logging.info("Unable to access MODELS_CONFIG in /models endpoint.")
         raise HTTPException(
             status_code=503,
             detail="Model configurations currently unavailable."
         )
     try:
-        model_names = [model["name"] for model in MODEL_CONFIG]
+        model_names = [model["name"] for model in MODELS_CONFIG]
         return model_names
     except Exception as e:
         logging.info(f"Unexpected error in /models endpoint: {e}")
         raise HTTPException(status_code=500, detail="Unable to access models.")
 
 
+# pull static dir from dir and log for debugging
+frontend_build_dir = os.environ.get("STATIC_DIR")
+if not frontend_build_dir or not os.path.isdir(frontend_build_dir):
+    logging.info(f"Unable to find static at {frontend_build_dir}")
+    sys.exit(1)
+logging.info(f"Serving static from {frontend_build_dir}")
+app.mount("/", StaticFiles(directory=frontend_build_dir, html=True), name="static")
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    host = os.environ.get("LOGION_HOST", "127.0.0.1")
+    port = int(os.environ.get("LOGION_PORT", "8000"))
+    logging.info(f"Spawning Logion server on http://{host}:{port}")
+    uvicorn.run(app, host=host, port=port)
+    

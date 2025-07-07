@@ -5,13 +5,10 @@ import asyncio
 from typing import Callable, Coroutine, Any
 from . import cancel
 
-"""
-Chance-confidence algorithm created by
-Charlie Cowen-Breen and Creston Brooks
-"""
 
 # type hint for callback
 ProgressCallback = Callable[[float, str], Coroutine[Any, Any, None]]
+
 
 class Logion:
 
@@ -28,8 +25,21 @@ class Logion:
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
+        self.blacklist = {
+    14: '.', 12: ',', 26: ':', 27: ';', 31: '?', 5: '!', 8: '(', 9: ')', 
+    58: '·', 62: '»', 54: '«', 81: 'α', 82: 'β', 83: 'γ', 84: 'δ', 85: 'ε', 
+    86: 'ζ', 87: 'η', 88: 'θ', 89: 'ι', 90: 'κ', 91: 'λ', 92: 'μ', 93: 'ν', 
+    94: 'ξ', 95: 'ο', 96: 'π', 97: 'ρ', 98: 'ς', 99: 'σ', 100: 'τ', 
+    101: 'υ', 102: 'φ', 103: 'χ', 104: 'ψ', 105: 'ω'
+}
+        self.blacklist_ids = set(self.blacklist.keys())
 
-    def _get_chance_probability(self, token_ids, index_of_id_to_mask):
+    
+    def _get_chance_probability(
+            self,
+            token_ids,
+            index_of_id_to_mask):
+        
         underlying_token_id = token_ids[0, index_of_id_to_mask].item()
         token_ids[0, index_of_id_to_mask] = self.Tokenizer.mask_token_id
         logits = self.Model(token_ids).logits
@@ -73,6 +83,7 @@ class Logion:
 
         return scores
 
+    
     def _get_mask_probabilities(self, masked_text_ids):
         mask_positions = (
             (masked_text_ids.squeeze() == self.Tokenizer.mask_token_id)
@@ -83,29 +94,31 @@ class Logion:
         logits = self.Model(masked_text_ids).logits.squeeze(0)
         mask_logits = logits[mask_positions]
         probabilities = self.sm(mask_logits)
-
         return probabilities
+    
 
+    
     def _argkmax(self, array, k, dim=0, prefix=None):
         if not prefix:
             indices = []
             for i in range(1, k + 1):
                 indices.append(
-                    torch.kthvalue(-array, i, dim=dim).indices.cpu().numpy().tolist()
+                    torch.kthvalue(-array, i, dim=dim).indices.tolist()
                 )
         else:
             indices = []
             i = 1
             while len(indices) < k:
                 index = (
-                    torch.kthvalue(-array, i, dim=dim).indices.cpu().numpy().tolist()
+                    torch.kthvalue(-array, i, dim=dim).indices.tolist()
                 )
                 if self.Tokenizer.convert_ids_to_tokens(index)[0].startswith(prefix):
                     indices.append(index)
                 i += 1
-
         return torch.tensor(indices)
+    
 
+    
     def display_sentence(self, toks):
         s = ""
         first_tok = True
@@ -121,40 +134,31 @@ class Logion:
                 tok = " " + tok
 
             s += tok
-
         return s
+    
 
+    
     def _argkmax_beam(self, array, k, prefix="", dim=1):
-        indices = []
+        array_cpu = array.cpu()
+
+        topk_vals, topk_ids = torch.topk(array_cpu, k, dim=dim, largest=True)
+
+        filtered_ids = []
         new_prefixes = []
-        added = 0
-        ind = 1
-
-        while added < k:
-            if ind > len(array[0]):
-                break
-            array = array.cpu()
-            val = torch.kthvalue(-array, ind, dim=dim).indices.numpy().tolist()
-            if prefix != "":
-                cur_tok = self.Tokenizer.convert_ids_to_tokens([val[0]])[0].replace(
-                    "##", ""
+        for tok_id in topk_ids.squeeze().tolist():
+            tok_str = self.Tokenizer.convert_ids_to_tokens([tok_id])[0].lstrip("##")
+            if prefix == "" or tok_str.startswith(prefix):
+                filtered_ids.append(tok_id)
+                new_prefixes.append(
+                    prefix[len(tok_str):] if len(tok_str) < len(prefix) else ""
                 )
-                trunc_prefix = prefix[: min(len(prefix), len(cur_tok))]
-                if not cur_tok.startswith(trunc_prefix):
-                    ind += 1
-                    continue
-            else:
-                cur_tok = ""
-            indices.append(val)
-            if len(cur_tok) >= len(prefix):
-                new_prefixes.append("")
-            else:
-                new_prefixes.append(prefix[len(cur_tok) :])
-            ind += 1
-            added += 1
+            if len(filtered_ids) == k:
+                break
 
-        return torch.tensor(indices), new_prefixes
+        return torch.tensor(filtered_ids, dtype=torch.long), new_prefixes
+    
 
+    
     def _get_n_predictions(
         self, token_ids, n, prefix, masked_ind, fill_inds, cur_prob=1
     ):
@@ -177,8 +181,43 @@ class Logion:
         n_probs = probabilities.squeeze()[suggestion_ids]
         n_probs = torch.mul(n_probs, cur_prob).tolist()
         new_fill_inds = [fill_inds + [i] for i in suggestion_ids]
-
         return tuple(zip(new_fill_inds, n_probs, prefixes))
+
+    def _get_n_predictions_batch(
+        self, token_ids, n, prefixes, masked_ind, fill_inds_list, cur_probs
+    ):
+        
+        mask_positions = (
+            (token_ids.squeeze() == self.Tokenizer.mask_token_id)
+            .nonzero()
+            .flatten()
+            .tolist()
+        )
+
+        # create batch of token_ids w/ filled positions
+        batch_size = len(fill_inds_list)
+        batch_token_ids = token_ids.repeat(batch_size, 1)
+        
+        for i in range(batch_size):
+            for j in range(len(fill_inds_list[i])):
+                batch_token_ids[i, mask_positions[j]] = fill_inds_list[i][j]
+
+        # get predictions for all items in batch
+        logits = self.Model(batch_token_ids).logits
+        mask_logits = logits[:, masked_ind]
+        probabilities = self.sm(mask_logits)
+
+        # process each item in batch
+        all_candidates = []
+        for i in range(batch_size):
+            arg1, new_prefixes = self._argkmax_beam(probabilities[i:i+1], n, prefixes[i], dim=1)
+            suggestion_ids = arg1.squeeze().tolist()
+            n_probs = probabilities[i, suggestion_ids]
+            n_probs = torch.mul(n_probs, cur_probs[i]).tolist()
+            new_fill_inds = [fill_inds_list[i] + [j] for j in suggestion_ids]
+            all_candidates.extend(zip(new_fill_inds, n_probs, new_prefixes))
+
+        return all_candidates
 
     async def _beam_search(
         self,
@@ -187,29 +226,34 @@ class Logion:
         task_id: str,
         cancellation_event: asyncio.Event,
         prefix='',
-        breadth=100
+        breadth=100,
     ):
-
+        
         mask_positions = (token_ids.detach().clone().squeeze() == self.Tokenizer.mask_token_id).nonzero().flatten().tolist()
         num_masked = len(mask_positions)
 
+        # get initial predictions
         cur_preds = self._get_n_predictions(token_ids.detach().clone(), beam_size, prefix, mask_positions[0], [])
 
+        # process remaining positions in batches
         for i in range(num_masked - 1):
-            
             await cancel.check_cancel_status(cancellation_event, task_id)
-
-            candidates = []
-            for j in range(len(cur_preds)):
-                await cancel.check_cancel_status(cancellation_event, task_id)
-                candidates += self._get_n_predictions(
-                    token_ids.detach().clone(),
-                    breadth,
-                    cur_preds[j][2],
-                    mask_positions[i + 1],
-                    cur_preds[j][0],
-                    cur_preds[j][1],
-                )
+            # prepare batch input
+            fill_inds_list = [pred[0] for pred in cur_preds]
+            prefixes = [pred[2] for pred in cur_preds]
+            cur_probs = [pred[1] for pred in cur_preds]
+            
+            # get predictions for all items in batch
+            candidates = self._get_n_predictions_batch(
+                token_ids.detach().clone(),
+                breadth,
+                prefixes,
+                mask_positions[i + 1],
+                fill_inds_list,
+                cur_probs
+            )
+            
+            # sort and select top candidates
             candidates.sort(key=lambda k: k[1], reverse=True)
             if i != num_masked - 2:
                 cur_preds = candidates[:beam_size]
@@ -217,15 +261,20 @@ class Logion:
                 cur_preds = candidates[:breadth]
 
         return cur_preds
+    
 
-    def _suggest_filtered(self, tokens, ground_token_id, filter):
+    
+    def _suggest_filtered(self,
+                          tokens,
+                          ground_token_id,
+                          filter):
         probs = self._get_mask_probabilities(tokens).cpu().squeeze()
         filtered_probs = probs * filter[ground_token_id]
         suggestion = self._argkmax(filtered_probs, 1)
-    
         return suggestion, probs[suggestion].item()
+    
 
-
+    
     async def fill_the_blank_given_transmitted(
         self,
         pre_text,
@@ -243,6 +292,9 @@ class Logion:
         min_lev=0,
         no_beam=False
     ):
+
+        if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
+            return [(transmitted_text, 0.0)]
 
         filtered_suggestions = {'?': 0.0}
 
@@ -275,7 +327,6 @@ class Logion:
 
             # process beam search results
             for suggestion_ids, probability, _ in sugs:
-                await cancel.check_cancel_status(cancellation_event, task_id)
 
                 converted_tokens = self.Tokenizer.convert_ids_to_tokens(suggestion_ids)
                 word = self._display_word(converted_tokens)
@@ -298,14 +349,12 @@ class Logion:
 
         # return only top sug
         # if none better than ? return default
-        if len(sorted_filtered_suggestions) > 1 and sorted_filtered_suggestions[0][0] != '?':
+        if len(sorted_filtered_suggestions) >= 1 and sorted_filtered_suggestions[0][0] not in ('?', transmitted_text):
             return sorted_filtered_suggestions[:1]
-        elif len(sorted_filtered_suggestions) == 1 and sorted_filtered_suggestions[0][0] != '?':
-             return sorted_filtered_suggestions[:1]
-        else:
-             return [('?', 0.0)]
+        return [(transmitted_text, 0.0)]
+    
 
-
+    
     def _display_word(self, toks):
         s = ''
         first_tok = True
@@ -317,4 +366,4 @@ class Logion:
                 pass
             s += tok
             first_tok = False
-        return s
+        return s 
