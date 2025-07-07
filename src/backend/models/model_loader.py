@@ -9,31 +9,29 @@ import logging
 import platform
 
 
-def load_encoder(model_name: str, model_type: str):
+def load_encoder(model_path: str, model_type: str, tokenizer_path: str):
     """
     Load encoder model using HF transformers library
 
     Parameters:
-        model_name (str) -- name of model
+        model_path (str) -- path to local model or model repo (from config)
+        model_type (str) -- model achitecture (from conifg)
+        tokenizer_pathn(str) -- path to local tokenizer or tokenizer repo (from config)
 
     Return:
-        model (in eval mode) and tokenizer
+        model (eval mode)
+        tokenizer
     """
     try:
-        tokenizer_name = "princeton-logion/LOGION-50k_wordpiece"
-        if not model_name.startswith("princeton-logion"):
-            raise ValueError(f"{model_name} not a valid Logion model.")
-        elif model_type == "bert":
-            tokenizer = BertTokenizer.from_pretrained(tokenizer_name)
-            model = BertForMaskedLM.from_pretrained(model_name)
-        elif model_type == "electra":
-            tokenizer = ElectraTokenizer.from_pretrained(tokenizer_name)
-            model = ElectraForMaskedLM.from_pretrained(model_name)
+        logging.info(f"Loading model from {model_path}\nLoading tokenizer from {tokenizer_path}")
+        if model_type == "bert":
+            tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
+            model = BertForMaskedLM.from_pretrained(model_path)
         else:
-            raise ValueError(f"Invalid model selected.")
+            raise ValueError(f"Invalid model/tokenizer selected.")
         return model.eval(), tokenizer
     except Exception as e:
-        logging.info(f"Unable to load model {model_name}: {e}")
+        logging.info(f"Unable to load model/tokenizer: {e}")
         raise
 
 
@@ -56,9 +54,10 @@ def load_device(model: torch.nn.Module):
     elif platform.system() == "Darwin" and torch.backends.mps.is_available():
         logging.info("MPS Metal available")
         device = torch.device("mps")
-    elif hasattr(torch, 'xpu') and torch.xpu.is_available():
-        logging.info("Intel XPU available")
-        device = torch.device("xpu")
+    # Intel XPU under construction
+    #elif hasattr(torch, 'xpu') and torch.xpu.is_available():
+        #logging.info("Intel XPU available")
+        #device = torch.device("xpu")
     else:
         device = torch.device("cpu")
 
