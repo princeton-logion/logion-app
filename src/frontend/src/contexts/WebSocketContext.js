@@ -7,8 +7,27 @@ function genUID() {
     );
 }
 
-// backend Websocket URL
-const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws/";
+// backend Websocket relative path
+/* const getWebSocketURL = () => {
+    const host = window.location.host;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const path = '/ws/';
+    return `${protocol}//${host}${path}`;
+}; */
+const getWebSocketURL = () => {
+    const host = window.location.host;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // get base path from browser url; OOD: "/node/della-[host]/[port]/", local: "/"
+    let basePath = window.location.pathname;
+    // if base path doesn't end in "/", add "/"
+    if (!basePath.endsWith('/')) {
+        basePath += '/';
+    }
+    // append ws endpoint to base path
+    const path = `${basePath}ws/`; 
+
+    return `${protocol}//${host}${path}`;
+};
 
 // establish WS context
 const WebSocketContext = createContext({
@@ -47,11 +66,12 @@ export const WebSocketProvider = ({ children }) => {
             return;
         }
 
-        console.log(`Attempting WebSocket connection to ${WEBSOCKET_URL}${clientId.current}`);
+        const dynamicUrl = `${getWebSocketURL()}${clientId.current}`;
+        console.log(`Attempting WebSocket connection to ${dynamicUrl}`);
         setIsConnecting(true);
-        // setIsConnected(false);
-
-        const ws = new WebSocket(`${WEBSOCKET_URL}${clientId.current}`);
+    
+        // Use the dynamically generated URL
+        const ws = new WebSocket(dynamicUrl);
 
         ws.onopen = () => {
             console.log("WebSocket connected");

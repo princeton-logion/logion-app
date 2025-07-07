@@ -24,7 +24,7 @@ function PredictionPage() {
     // task state: { id, status, progress, message, results, error, statusCode }
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/models")
+        fetch("models")
             .then((response) => response.json())
             .then((data) => {
                 setModelOptions(data);
