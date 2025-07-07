@@ -1,0 +1,15 @@
+models:
+  - name: "Base BERT"
+    model_path: "princeton-logion/logion-bert-base"
+    type: "bert"
+    tokenizer_path: "princeton-logion/logion-bert-base"
+
+  - name: "Plato BERT"
+    model_path: "princeton-logion/logion-bert-plato"
+    type: "bert"
+    tokenizer_path: "princeton-logion/logion-bert-base"
+
+lev_filter:
+   lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
+   lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"
+   lev3: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/3.npy"
