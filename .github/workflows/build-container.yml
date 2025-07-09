@@ -13,6 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Clear runner disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+ 
       - name: Install sys dependencies
         run: |
           # Only dependencies needed for the container *build* go here
@@ -25,11 +36,11 @@ jobs:
         with:
           apptainer-version: 1.3.6
 
-      - name: Build Apptainer container
+      - name: Build container
         run: |
           apptainer build logion.sif logion.def
 
-      - name: Upload container artifact
+      - name: Upload container
         uses: actions/upload-artifact@v4
         with:
           name: logion-container
