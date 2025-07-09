@@ -61,14 +61,13 @@ active_tasks: Dict[str, tuple[asyncio.Task, asyncio.Event]] = {}
 """
 Remote resource handling
 """
-RESOURCES_CONFIG = "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/resources/resources_config.yaml"
-#RESOURCES_CONFIG = os.environ.get("LOGION_RESOURCES_CONFIG")
+#RESOURCES_CONFIG = "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/backend/resources_config.yaml"
+RESOURCES_CONFIG = os.environ.get("LOGION_RESOURCES_CONFIG")
 if not RESOURCES_CONFIG:
     logging.info("LOGION_RESOURCES_CONFIG env variable not set.")
     sys.exit(1)
 else:
     logging.info(f"LOGION_RESOURCES_CONFIG env variable: {RESOURCES_CONFIG}")
-
 
 MODELS_CONFIG = []
 LEV_CONFIG_ENTRY = {}

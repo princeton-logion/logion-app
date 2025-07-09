@@ -10,20 +10,25 @@ jobs:
   proof-publish-doc:
     name: Publish doc
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Execute vale
         uses: errata-ai/vale-action@v2.1.1
         with:
           version: 2.29.2
           files: docs/
+
       - name: Initialize Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+
       - name: Install mkdocs-material
         run: |
           pip install mkdocs-material
+          
       - name: Publish docs to Git pages
         run: |
           mkdocs gh-deploy --force --no-history

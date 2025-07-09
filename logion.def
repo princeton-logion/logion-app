@@ -1,0 +1,87 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
+
+%labels
+    Author "Jacob Murel"
+    Version "1.0.1-beta.0"
+    Name "Princeton Logion OnDemand"
+    Description "Machine learning for Greek philology (Open OnDemand)"
+    Copyright "© 2025 Jacob Murel and The Trustees of Princeton University"
+    URL "https://www.logionproject.princeton.edu/"
+    BuildOS
+    BuildArchitecture
+    BuildDate
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PATH="/opt/logion/bin:$PATH"
+    export STATIC_DIR="/logion-app-ondemand/frontend/build"
+    export LOGION_RESOURCES_CONFIG="/resources/resources_config.yaml"
+
+    # set app port
+    export PYTHONUNBUFFERED=1
+
+    # confirm NVIDIA libraries from base image are found
+    export LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PATH
+    # point to Nvidia on host
+    export NVIDIA_VISIBLE_DEVICES=all
+    export NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+%setup
+    mkdir -p $APPTAINER_ROOTFS/resources
+    mkdir -p ${APPTAINER_ROOTFS}/logion-app-ondemand
+    cp -r ./src/backend ${APPTAINER_ROOTFS}/logion-app-ondemand/
+    cp -r ./src/frontend ${APPTAINER_ROOTFS}/logion-app-ondemand/
+    cp ./requirements.txt ${APPTAINER_ROOTFS}/logion-app-ondemand/backend
+
+%post
+    echo "Install sys dependencies"
+    apt-get update
+    apt-get install -y --no-install-recommends curl
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y --no-install-recommends \
+        nodejs \
+        python3.10-venv \
+        git
+
+    echo "Build frontend static"
+    cd /logion-app-ondemand/frontend
+    npm install
+    npm run build
+
+    echo "Prepare backend"
+    python3.10 -m venv /opt/logion
+    . /opt/logion/bin/activate
+    pip install --no-cache-dir --upgrade pip
+    pip install --no-cache-dir -r /logion-app-ondemand/backend/requirements.txt
+
+    echo "Clean build dependencies"
+    apt-get purge -y --auto-remove build-essential python3.10-dev
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    rm -rf /root/.cache/npm
+
+%runscript
+    # `apptainer run`
+
+    cd /logion-app-ondemand/backend
+
+    echo "--- Logion App Container ---"
+    echo "Spawning Logion server on http://${HOST}:${PORT}"
+    echo "GPU available: $(/opt/logion/bin/python -c 'import torch; print(torch.cuda.is_available())')"
+    echo "Static served from ${STATIC_DIR}"
+    
+    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" "$@"
+
+%startscript
+    # `apptainer instance start`
+    
+    cd /logion-app-ondemand/backend
+
+    echo "--- Logion App Container ---"
+    echo "Spawning Logion server on http://${HOST}:${PORT}"
+    echo "GPU available: $(/opt/logion/bin/python -c 'import torch; print(torch.cuda.is_available())')"
+    echo "Static served from ${STATIC_DIR}"
+    
+    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" "$@"

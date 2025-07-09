@@ -1,10 +1,10 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
 const log = require('electron-log');
 
-// set log file -- same as backend
+// set log file
 log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
 const logFilePath = log.transports.file.getFile().path;
 
@@ -36,9 +36,10 @@ function createLoadingWindow() {
 }
 
 function createMainWindow() {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     mainWindow = new BrowserWindow({
-        width: 1000,
-        height: 650,
+        width: width,
+        height: height,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: true,
@@ -46,9 +47,7 @@ function createMainWindow() {
         },
     });
 
-    const startupURL = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8000'  // dev
-        : `file://${path.join(__dirname, 'frontend', 'index.html')}`; // prod
+    const startupURL = 'http://127.0.0.1:8000';
 
     log.info(`[createMainWindow] Loading URL: ${startupURL}`);
         mainWindow.loadURL(startupURL);
@@ -68,17 +67,20 @@ function createMainWindow() {
 
 function startBackend() {
     let backendPath;
+    let staticDir;
 
     const isDev = process.env.NODE_ENV === 'development';
 
     if (isDev) {
-        backendPath = '/Users/jm9095/logion-app-websocket/src/backend/dist/main';
+        backendPath = '/Users/jm9095/logion-app/src/backend/dist/main';
         if (process.platform === 'win32') {
             backendPath += '.exe';
         }
+        staticDir = path.join(__dirname, '..', 'frontend', 'build');
         log.info("Running in dev mode.");
-    } else if (process.platform === 'win32') {
-        backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // Win exec
+    } else {
+    if (process.platform === 'win32') {
+        backendPath = path.join(process.resourcesPath, 'extraResources', 'main.exe'); // win exec
         log.info("Running prod app on Windows.");
     } else if (process.platform === 'darwin') {
         backendPath = path.join(process.resourcesPath, 'extraResources', 'main'); // macOS exec
@@ -91,14 +93,17 @@ function startBackend() {
         app.quit();
         return;
     }
+    
+    staticDir = path.join(process.resourcesPath, 'frontend')}
 
     log.info('Resources Path:', process.resourcesPath);
     log.info('Backend API Path:', backendPath);
+    log.info('Frontend static:', staticDir)
 
     try {
         backendProcess = spawn(backendPath, [], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, LOGION_LOG_PATH: logFilePath }, // add LOGION_LOG_PATH
+            env: { ...process.env, STATIC_DIR: staticDir },
         });
         log.info('Backend API started.');
     } catch (err) {

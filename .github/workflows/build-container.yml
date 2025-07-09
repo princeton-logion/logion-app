@@ -1,0 +1,59 @@
+name: Build Apptainer container
+
+on:
+  push:
+    branches:
+      - ood
+
+jobs:
+  build_container:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install sys dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libseccomp-dev \
+            pkg-config \
+            squashfs-tools \
+            cryptsetup \
+            curl \
+            gnupg \
+            git \
+            runc
+
+      - name: Initialize Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Apptainer
+        run: |
+          export VERSION=1.3.6-1.sdl9
+          wget https://github.com/apptainer/apptainer/releases/download/v${VERSION}/apptainer-${VERSION}.tar.gz
+          tar -xzf apptainer-${VERSION}.tar.gz
+          cd apptainer-${VERSION}
+          ./mconfig
+          make -C builddir
+          sudo make -C builddir install
+          apptainer version
+
+      - name: Build Apptainer container
+        run: |
+          sudo apptainer build logion.sif logion.def
+
+      - name: Load container
+        uses: actions/upload-artifact@v4
+        with:
+          name: logion-container
+          path: logion.sif
