@@ -13,46 +13,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Initialize Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.x
-
       - name: Install sys dependencies
         run: |
+          # Only dependencies needed for the container *build* go here
+          # Apptainer itself is handled by the next step
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libseccomp-dev \
-            pkg-config \
-            squashfs-tools \
-            cryptsetup \
-            curl \
-            gnupg \
-            git \
-            runc
-
-      - name: Initialize Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
+          sudo apt-get install -y squashfs-tools cryptsetup
 
       - name: Install Apptainer
-        run: |
-          export VERSION=1.3.6-1.sdl9
-          wget https://github.com/apptainer/apptainer/releases/download/v${VERSION}/apptainer-${VERSION}.tar.gz
-          tar -xzf apptainer-${VERSION}.tar.gz
-          cd apptainer-${VERSION}
-          ./mconfig
-          make -C builddir
-          sudo make -C builddir install
-          apptainer version
+        uses: eWaterCycle/setup-apptainer-action@v3
+        with:
+          apptainer-version: 1.3.6
 
       - name: Build Apptainer container
         run: |
-          sudo apptainer build logion.sif logion.def
+          apptainer build logion.sif logion.def
 
-      - name: Load container
+      - name: Upload container artifact
         uses: actions/upload-artifact@v4
         with:
           name: logion-container
