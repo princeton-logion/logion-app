@@ -29,12 +29,6 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # set up log
-""" log_file_path = os.environ.get("LOGION_LOG_PATH", "logion-app.log")
-logging.basicConfig(
-    filename=log_file_path,
-    level="INFO",
-    format="%(asctime)s - %(filename)s - %(lineno)d - %(message)s",
-) """
 logging.basicConfig(
     level="INFO",
     format="%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s",
@@ -61,7 +55,6 @@ active_tasks: Dict[str, tuple[asyncio.Task, asyncio.Event]] = {}
 """
 Remote resource handling
 """
-#RESOURCES_CONFIG = "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/backend/resources_config.yaml"
 RESOURCES_CONFIG = os.environ.get("LOGION_RESOURCES_CONFIG")
 if not RESOURCES_CONFIG:
     logging.info("LOGION_RESOURCES_CONFIG env variable not set.")
@@ -271,23 +264,24 @@ async def run_detection_task(
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
         
         # load .npy matrix from HF via config
-        await progress_callback(10.0, f"Loading Levenshtein filter {lev_distance}")
-        if await cancel.check_cancel_status(cancellation_event, task_id): return None
+        # await progress_callback(10.0, f"Loading Levenshtein filter {lev_distance}")
+        # if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
-        lev_filter_path = LEV_CONFIG_ENTRY.get(f"lev{lev_distance}")
-        if not lev_filter_path:
-            logging.info(f"Task {task_id}: Unable to load URL for Lev filter {lev_distance}")
-            raise HTTPException(status_code=422, detail=f"{lev_distance} not an available Levenshtein distance.")
+        # lev_filter_path = LEV_CONFIG_ENTRY.get(f"lev{lev_distance}")
+        # if not lev_filter_path:
+        #     logging.info(f"Task {task_id}: Unable to load URL for Lev filter {lev_distance}")
+        #     raise HTTPException(status_code=422, detail=f"{lev_distance} not an available Levenshtein distance.")
 
-        try:
-            logging.info(f"Lev {lev_distance} URL: {lev_filter_path}")
-            lev_filter = lev_filter_loader.load_filter(lev_filter_path)
-        except Exception as e:
-            logging.info(f"Task {task_id}: Unable to load Lev filter: {e}")
-            raise HTTPException(status_code=500, detail="Unable to load Levenshtein filter.") from e
+        # try:
+        #     logging.info(f"Lev {lev_distance} URL: {lev_filter_path}")
+        #     lev_filter = lev_filter_loader.load_filter(lev_filter_path)
+        # except Exception as e:
+        #     logging.info(f"Task {task_id}: Unable to load Lev filter: {e}")
+        #     raise HTTPException(status_code=500, detail="Unable to load Levenshtein filter.") from e
 
         # create instance of Logion class
-        logion_model = logion_class.Logion(model, tokenizer, lev_filter, device)
+        #logion_model = logion_class.Logion(model, tokenizer, lev_filter, device)
+        logion_model = logion_class.Logion(model, tokenizer, device)
 
         text = request_data.text
 
@@ -591,8 +585,8 @@ app.mount("/", StaticFiles(directory=frontend_build_dir, html=True), name="stati
 
 
 if __name__ == "__main__":
-    host = os.environ.get("LOGION_HOST", "127.0.0.1")
-    port = int(os.environ.get("LOGION_PORT", "8000"))
+    host = os.environ.get("LOGION_HOST")
+    port = int(os.environ.get("LOGION_PORT"))
     logging.info(f"Spawning Logion server on http://{host}:{port}")
     uvicorn.run(app, host=host, port=port)
     
