@@ -8,6 +8,10 @@ on:
 jobs:
   build_and_package:
     runs-on: ${{ matrix.os }}
+    env:
+      LOGION_RESOURCES_CONFIG: "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/resources/resources_config.yaml"
+      LOGION_HOST: "127.0.0.1"
+      LOGION_PORT: "8000"
     strategy:
       fail-fast: false
       matrix:

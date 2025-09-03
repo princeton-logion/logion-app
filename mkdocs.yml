@@ -44,3 +44,4 @@ nav:
       - 'Overview': 'explainers/_index.md'
       - 'Chance-confidence ratio': 'explainers/ccr.md'
       - 'Levenshtein distance': 'explainers/lev-dist.md'
+    - 'Credits': 'credits.md'

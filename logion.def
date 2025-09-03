@@ -8,9 +8,6 @@ From: pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
     Description "Machine learning for Greek philology (Open OnDemand)"
     Copyright "© 2025 Jacob Murel and The Trustees of Princeton University"
     URL "https://www.logionproject.princeton.edu/"
-    BuildOS
-    BuildArchitecture
-    BuildDate
 
 %environment
     export LC_ALL=C.UTF-8

@@ -3,7 +3,7 @@ import numpy as np
 from polyleven import levenshtein
 import asyncio
 from typing import Callable, Coroutine, Any
-from . import cancel
+from . import cancel, blacklist
 
 
 # type hint for callback
@@ -25,17 +25,9 @@ class Logion:
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
-        self.blacklist = {
-    14: '.', 12: ',', 26: ':', 27: ';', 31: '?', 5: '!', 8: '(', 9: ')', 
-    58: '·', 62: '»', 54: '«', 6: '\"', 7: '\'', 10: '*', 11: '+', 13: '-',
-    81: 'α', 82: 'β', 83: 'γ', 84: 'δ', 85: 'ε', 
-    86: 'ζ', 87: 'η', 88: 'θ', 89: 'ι', 90: 'κ', 91: 'λ', 92: 'μ', 93: 'ν', 
-    94: 'ξ', 95: 'ο', 96: 'π', 97: 'ρ', 98: 'ς', 99: 'σ', 100: 'τ', 
-    101: 'υ', 102: 'φ', 103: 'χ', 104: 'ψ', 105: 'ω', 1: '[UNK]', 16: '0',
-    17: '1', 18: '2', 19: '3', 20: '4', 21: '5', 22: '6', 23: '7', 24: '8', 25: '9'
-}
-        self.blacklist_ids = set(self.blacklist.keys())
-        self.blacklist_chars = set(self.blacklist.values())
+        #self.blacklist = blacklist.blacklist
+        #self.blacklist_ids = set(self.blacklist.keys())
+        #self.blacklist_chars = set(self.blacklist.values())
 
     
     def _get_chance_probability(
@@ -51,6 +43,7 @@ class Logion:
         token_ids[0, index_of_id_to_mask] = underlying_token_id
 
         return probabilities, underlying_token_id
+
 
     async def get_chance_scores(
             self,
@@ -186,6 +179,7 @@ class Logion:
         new_fill_inds = [fill_inds + [i] for i in suggestion_ids]
         return tuple(zip(new_fill_inds, n_probs, prefixes))
 
+
     def _get_n_predictions_batch(
         self, token_ids, n, prefixes, masked_ind, fill_inds_list, cur_probs
     ):
@@ -221,6 +215,7 @@ class Logion:
             all_candidates.extend(zip(new_fill_inds, n_probs, new_prefixes))
 
         return all_candidates
+
 
     async def _beam_search(
         self,
@@ -266,7 +261,7 @@ class Logion:
         return cur_preds
     
 
-    
+    # uncomment for Lev filter
     # def _suggest_filtered(self,
     #                       tokens,
     #                       ground_token_id,
@@ -296,8 +291,8 @@ class Logion:
         no_beam=False
     ):
 
-        if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
-            return [(transmitted_text, 0.0)]
+        #if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
+            #return [(transmitted_text, 0.0)]
 
         best_suggestion = (transmitted_text, 0.0)
 
@@ -337,7 +332,8 @@ class Logion:
 
         # if none better than orig or blacklisted, return orig
         filtered_suggestion = best_suggestion[0]
-        if (filtered_suggestion != transmitted_text and filtered_suggestion not in self.blacklist_chars):
+        #if (filtered_suggestion != transmitted_text and filtered_suggestion not in self.blacklist_chars):
+        if filtered_suggestion != transmitted_text:
             return [best_suggestion]
         else:
             return [(transmitted_text, 0.0)]

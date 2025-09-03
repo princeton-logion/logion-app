@@ -47,7 +47,7 @@ function createMainWindow() {
         },
     });
 
-    const startupURL = 'http://127.0.0.1:8000';
+    const startupURL = 'http://127.0.0.1:8000'; //dynamic load from env variables
 
     log.info(`[createMainWindow] Loading URL: ${startupURL}`);
         mainWindow.loadURL(startupURL);
@@ -98,7 +98,7 @@ function startBackend() {
 
     log.info('Resources Path:', process.resourcesPath);
     log.info('Backend API Path:', backendPath);
-    log.info('Frontend static:', staticDir)
+    log.info('Frontend Static Path:', staticDir)
 
     try {
         backendProcess = spawn(backendPath, [], {
