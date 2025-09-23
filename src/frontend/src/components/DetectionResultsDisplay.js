@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { OverlayTrigger, Popover } from 'react-bootstrap';
 import { handleWordColor } from '../utils/detectResultsUtils';
-import PredictionPopover from './popOvers/PredictionPopover'
-import CCRPopover from './popOvers/CCRPopover'
+import PredictionPopover from './popOvers/PredictionPopover';
+import CCRPopover from './popOvers/CCRPopover';
 
 const DetectionResultsDisplay = ({
     taskStatus,
@@ -12,6 +12,10 @@ const DetectionResultsDisplay = ({
     const [activePopoverWord, setActivePopoverWord] = useState(null);
     const popoverRef = useRef(null);
     const wordRef = useRef(null);
+
+    useEffect(() => {
+        setActivePopoverWord(null);
+    }, [predictions]);
 
     // click to toggle word popover
     const handleWordClick = useCallback((wordData) => {
@@ -32,8 +36,7 @@ const DetectionResultsDisplay = ({
                 wordRef.current &&
                 !wordRef.current.contains(event.target)
             ) {
-                    setActivePopoverWord(null);
-
+                setActivePopoverWord(null);
             }
         };
 
@@ -52,16 +55,15 @@ const DetectionResultsDisplay = ({
         return <p className="text-center text-muted mt-3"></p>;
     }
 
-    const textElements = predictions.map((wordPrediction, index) => {
+    const coloredTextElements = predictions.map((wordPrediction, index) => {
         const { original_word, suggestions } = wordPrediction;
         const ccrScore = ccrValues[index]?.ccr_value;
         const color = handleWordColor(ccrScore);
         const wordData = { original_word, suggestions, originalIndex: index };
 
-
         return (
             <span
-                key={`${original_word}-${index}`}
+                key={`colored-${original_word}-${index}`}
                 style={{
                     color: color,
                     cursor: 'pointer',
@@ -70,6 +72,26 @@ const DetectionResultsDisplay = ({
                 onClick={() => handleWordClick(wordData)}
             >
                 {original_word + " "}
+            </span>
+        );
+    });
+
+    const blackTextElements = predictions.map((wordPrediction, index) => {
+        const { original_word, suggestions } = wordPrediction;
+        const isSelected = activePopoverWord?.originalIndex === index;
+        const replacement = isSelected && suggestions.length > 0 ? suggestions[0].token : null;
+        const style = replacement ? {
+            color: '#AA4499',
+            fontWeight: 'bold',
+            borderBottom: '2px solid #AA4499'
+        } : { color: 'black' };
+
+        return (
+            <span
+                key={`black-${original_word}-${index}`}
+                style={style}
+            >
+                {(replacement || original_word) + " "}
             </span>
         );
     });
@@ -83,41 +105,54 @@ const DetectionResultsDisplay = ({
 
     return (
         <div className='d-flex'>
-        <div className="text-highlight-container col-md-7">
-        {textElements}
+            <div className="col-md-7">
+            <h6 className="mb-1 fw-bold">Original Text</h6>
+            <div className="text-highlight-container mb-3">
+                {coloredTextElements}
+            </div>
+
+            <h6 className="mb-1 fw-bold">Emendation</h6>
+            <div className="text-highlight-container mb-4" style={{ borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+                {blackTextElements}
+            </div>
+            </div>
+
+            {activePopoverWord && selectedWordSuggestions && (
+                <div className="col-md-4">
+                    <h5>Suggestions for: <strong>{selectedOriginalWord}</strong></h5>
+                    <table className="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>
+                                    Prediction
+                                    <PredictionPopover>
+                                        <sup>
+                                            <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
+                                        </sup>
+                                    </PredictionPopover>
+                                </th>
+                                <th>
+                                    Chance-confidence
+                                    <CCRPopover>
+                                        <sup>
+                                            <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
+                                        </sup>
+                                    </CCRPopover>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {selectedWordSuggestions.map((pred, idx) => (
+                                <tr key={idx}>
+                                    <td>{pred.token}</td>
+                                    <td>{typeof selectedCCR === 'number' ? selectedCCR.toFixed(4) : 'N/A'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
-        {activePopoverWord && selectedWordSuggestions && (
-        <div className="col-md-4">
-            <h5>Suggestions for: <strong>{selectedOriginalWord}</strong></h5>
-            <table className="table table-striped">
-            <thead>
-                <tr>
-                <th>Prediction<PredictionPopover>
-                        <sup>
-                     <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
-                     </sup>
-                   </PredictionPopover></th>
-                <th>Chance-confidence
-                <CCRPopover>
-                        <sup>
-                     <i className="fas fa-info-circle ms-1" style={{ fontSize: '1em', cursor: 'pointer' }}></i>
-                     </sup>
-                   </CCRPopover>
-                </th>
-                </tr>
-            </thead>
-            <tbody>
-                {selectedWordSuggestions.map((pred, idx) => (
-                <tr key={idx}>
-                    <td>{pred.token}</td>
-                    <td>{typeof selectedCCR === 'number' ? selectedCCR.toFixed(4): 'N/A'}</td>
-                </tr>
-                ))}
-            </tbody>
-            </table>
-        </div>
-        )}
-    </div>
     );
 };
 

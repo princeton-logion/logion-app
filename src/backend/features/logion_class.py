@@ -3,7 +3,7 @@ import numpy as np
 from polyleven import levenshtein
 import asyncio
 from typing import Callable, Coroutine, Any
-from . import cancel
+from . import cancel, blacklist
 
 
 # type hint for callback
@@ -12,7 +12,7 @@ ProgressCallback = Callable[[float, str], Coroutine[Any, Any, None]]
 
 class Logion:
 
-    def __init__(self, Model, Tokenizer, Levenshtein_Filter, Device):
+    def __init__(self, Model, Tokenizer, Device):
         # set seed for reproducibility
         seed_value = 42
         np.random.seed(seed_value)
@@ -20,19 +20,14 @@ class Logion:
 
         self.Model = Model
         self.Tokenizer = Tokenizer
-        self.lev_filter = Levenshtein_Filter
+        #self.lev_filter = Levenshtein_Filter
         self.device = Device
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
-        self.blacklist = {
-    14: '.', 12: ',', 26: ':', 27: ';', 31: '?', 5: '!', 8: '(', 9: ')', 
-    58: '·', 62: '»', 54: '«', 81: 'α', 82: 'β', 83: 'γ', 84: 'δ', 85: 'ε', 
-    86: 'ζ', 87: 'η', 88: 'θ', 89: 'ι', 90: 'κ', 91: 'λ', 92: 'μ', 93: 'ν', 
-    94: 'ξ', 95: 'ο', 96: 'π', 97: 'ρ', 98: 'ς', 99: 'σ', 100: 'τ', 
-    101: 'υ', 102: 'φ', 103: 'χ', 104: 'ψ', 105: 'ω'
-}
-        self.blacklist_ids = set(self.blacklist.keys())
+        #self.blacklist = blacklist.blacklist
+        #self.blacklist_ids = set(self.blacklist.keys())
+        #self.blacklist_chars = set(self.blacklist.values())
 
     
     def _get_chance_probability(
@@ -48,6 +43,7 @@ class Logion:
         token_ids[0, index_of_id_to_mask] = underlying_token_id
 
         return probabilities, underlying_token_id
+
 
     async def get_chance_scores(
             self,
@@ -183,6 +179,7 @@ class Logion:
         new_fill_inds = [fill_inds + [i] for i in suggestion_ids]
         return tuple(zip(new_fill_inds, n_probs, prefixes))
 
+
     def _get_n_predictions_batch(
         self, token_ids, n, prefixes, masked_ind, fill_inds_list, cur_probs
     ):
@@ -218,6 +215,7 @@ class Logion:
             all_candidates.extend(zip(new_fill_inds, n_probs, new_prefixes))
 
         return all_candidates
+
 
     async def _beam_search(
         self,
@@ -263,15 +261,15 @@ class Logion:
         return cur_preds
     
 
-    
-    def _suggest_filtered(self,
-                          tokens,
-                          ground_token_id,
-                          filter):
-        probs = self._get_mask_probabilities(tokens).cpu().squeeze()
-        filtered_probs = probs * filter[ground_token_id]
-        suggestion = self._argkmax(filtered_probs, 1)
-        return suggestion, probs[suggestion].item()
+    # uncomment for Lev filter
+    # def _suggest_filtered(self,
+    #                       tokens,
+    #                       ground_token_id,
+    #                       filter):
+    #     probs = self._get_mask_probabilities(tokens).cpu().squeeze()
+    #     filtered_probs = probs * filter[ground_token_id]
+    #     suggestion = self._argkmax(filtered_probs, 1)
+    #     return suggestion, probs[suggestion].item()
     
 
     
@@ -293,65 +291,52 @@ class Logion:
         no_beam=False
     ):
 
-        if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
-            return [(transmitted_text, 0.0)]
+        #if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
+            #return [(transmitted_text, 0.0)]
 
-        filtered_suggestions = {'?': 0.0}
+        best_suggestion = (transmitted_text, 0.0)
 
+        if no_beam:
+            return [best_suggestion]
+    
+        # iterate [MASK] nums, 1->max
         for num_masks in range(1, max_masks + 1):
             await cancel.check_cancel_status(cancellation_event, task_id)
-            if num_masks == 1 and len(transmitted_tokens) == 1:
-
-                sug, prob = self._suggest_filtered(tokens.clone(), transmitted_tokens[0], self.lev_filter)
-                word = self._display_word(self.Tokenizer.convert_ids_to_tokens(sug))
-                filtered_suggestions[word] = prob
-                continue
-
-            if no_beam:
-                continue
-
-            text = (
+    
+            # determine number of [MASK]s for blank
+            text_to_mask = (
                 pre_text
                 + f"".join([f"{self.Tokenizer.mask_token}"] * num_masks)
                 + post_text
             )
-            beam_tokens = self.Tokenizer.encode(text, return_tensors="pt").to(self.device)
-
+            beam_tokens = self.Tokenizer.encode(text_to_mask, return_tensors="pt").to(self.device)
+    
             sugs = await self._beam_search(
                 beam_tokens,
-                depth if num_masks>1 or len(transmitted_tokens)>1 else len(self.Tokenizer.vocab),
-                breadth=breadth if num_masks>1 or len(transmitted_tokens)>1 else len(self.Tokenizer.vocab),
+                beam_size=depth,
+                breadth=breadth,
                 task_id=task_id,
                 cancellation_event=cancellation_event
             )
-
-            # process beam search results
+    
+            # filter search results via lev dist
             for suggestion_ids, probability, _ in sugs:
-
                 converted_tokens = self.Tokenizer.convert_ids_to_tokens(suggestion_ids)
-                word = self._display_word(converted_tokens)
+                candidate_word = self._display_word(converted_tokens)
 
-                word_str = str(word)
-                transmitted_text_str = str(transmitted_text)
-                d = levenshtein(word_str, transmitted_text_str, max_lev)
+                # calculate lev dist w/out matrix for candidate words
+                dist = levenshtein(candidate_word, transmitted_text, max_lev)
+                if min_lev <= dist <= max_lev:
+                    if probability > best_suggestion[1]:
+                        best_suggestion = (candidate_word, probability)
 
-                # apply Lev filter
-                if d > max_lev or d < min_lev:
-                    continue
-
-                # update sugs if better prob
-                if (word not in filtered_suggestions) or (
-                    word in filtered_suggestions and filtered_suggestions[word] < probability):
-                    filtered_suggestions[word] = probability
-                    break
-
-        sorted_filtered_suggestions = sorted(filtered_suggestions.items(), key=lambda x: x[1], reverse=True)
-
-        # return only top sug
-        # if none better than ? return default
-        if len(sorted_filtered_suggestions) >= 1 and sorted_filtered_suggestions[0][0] not in ('?', transmitted_text):
-            return sorted_filtered_suggestions[:1]
-        return [(transmitted_text, 0.0)]
+        # if none better than orig or blacklisted, return orig
+        filtered_suggestion = best_suggestion[0]
+        #if (filtered_suggestion != transmitted_text and filtered_suggestion not in self.blacklist_chars):
+        if filtered_suggestion != transmitted_text:
+            return [best_suggestion]
+        else:
+            return [(transmitted_text, 0.0)]
     
 
     

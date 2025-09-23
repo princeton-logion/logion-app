@@ -8,6 +8,10 @@ on:
 jobs:
   build_and_package:
     runs-on: ${{ matrix.os }}
+    env:
+      LOGION_RESOURCES_CONFIG: "https://raw.githubusercontent.com/princeton-logion/logion-app/main/src/resources/resources_config.yaml"
+      LOGION_HOST: "127.0.0.1"
+      LOGION_PORT: "8000"
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +40,7 @@ jobs:
 
       - name: Build backend exec
         run: |
-          pyinstaller --onefile --paths . --add-data "resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=prediction --hidden-import=detection main.py
+          pyinstaller --onefile --paths . --add-data "../resources/resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=features main.py
         working-directory: ./src/backend/
 
       - name: Create Artifact -- Win
@@ -92,14 +96,14 @@ jobs:
           npm run build
         working-directory: ./src/build/
 
-      - name: Create Packaged App -- Win
+      - name: Load Packaged App -- Win
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: packaged-app-windows
           path: ./src/build/dist/
 
-      - name: Create Packaged App -- macOS
+      - name: Load Packaged App -- macOS
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
