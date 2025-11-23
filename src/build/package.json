@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "axios": "^1.6.7",
-    "electron-log": "^5.2.4"
+    "electron-log": "^5.2.4",
+    "dotenv": "^16.4.5" 
   },
   "build": {
     "appId": "edu.princeton.logion",
@@ -28,9 +29,14 @@
     "files": [
       "main.js",
       "loading.html",
-      "preload.js"
+      "preload.js",
+      "app.env"
     ],
     "extraResources": [
+      {
+        "from": "app.env",
+        "to": "." 
+      },
       {
         "from": "../backend/dist/",
         "to": "./extraResources/",

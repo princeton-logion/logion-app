@@ -52,7 +52,9 @@ function MainPage() {
           }
       </div>*/}
 
-      <Link to="/prediction" className="btn btn-pill">Word Prediction</Link>
+      <Link to="/word_prediction" className="btn btn-pill">Word Prediction</Link>
+
+      <Link to="/char_prediction" className="btn btn-pill">Character Prediction</Link>
 
       <Link to="/detection" className="btn btn-pill">Error Detection</Link>
 

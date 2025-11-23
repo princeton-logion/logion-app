@@ -18,8 +18,8 @@ class PredictionRequest(BaseModel):
 
     @field_validator("text")
     def check_mask_presence(cls: type, value: str) -> str:
-        if "?" not in value:
-            raise ValueError("Input text must contain one or more ? tokens.")
+        if "-" not in value:
+            raise ValueError("Input text must contain one or more '-' characters.")
         return value
 
     @field_validator("text")
@@ -44,11 +44,11 @@ class TokenPrediction(BaseModel):
     token: str
     probability: float
 
-    @field_validator("token")
-    def pred_token_not_null(cls: type, value: str) -> str:
-        if not value.strip():
-            raise ValueError("Predicted token cannot be an empty string.")
-        return value
+    #@field_validator("token")
+    #def pred_token_not_null(cls: type, value: str) -> str:
+        #if not value.strip():
+            #raise ValueError("Predicted token cannot be an empty string.")
+        #return value
 
     @field_validator("probability")
     def probability_score_range(cls: type, value: float) -> float:
@@ -62,20 +62,20 @@ class MaskedIndexPredictions(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    predictions: Dict[int, MaskedIndexPredictions]
+   predictions: Dict#[int, MaskedIndexPredictions]
 
-    @field_validator("predictions")
-    def validate_predictions(cls: type, predictions: Dict) -> Dict:
-        if not isinstance(predictions, Dict):
-            raise ValueError(
-                "Mask token predictions must be organized as a dictionary."
-            )
-        for masked_index, pred_list in predictions.items():
-            if not isinstance(masked_index, int):
-                raise ValueError("Dictionary key for mask index must be an integer.")
-            if not isinstance(pred_list, MaskedIndexPredictions):
-                raise ValueError(
-                    "Value for mask index key must be a MaskedIndexPredictions list"
-                    " object."
-                )
-        return predictions
+   @field_validator("predictions")
+   def validate_predictions(cls: type, predictions: Dict) -> Dict:
+       if not isinstance(predictions, Dict):
+           raise ValueError(
+               "Mask token predictions must be organized as a dictionary."
+           )
+       for masked_index, pred_list in predictions.items():
+           if not isinstance(masked_index, int):
+               raise ValueError("Dictionary key for mask index must be an integer.")
+           if not isinstance(pred_list, MaskedIndexPredictions):
+               raise ValueError(
+                   "Value for mask index key must be a MaskedIndexPredictions list"
+                   " object."
+               )
+       return predictions

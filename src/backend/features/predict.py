@@ -25,21 +25,21 @@ async def prediction_function(
     Masked language modeling inference for lacuna predictions using sliding window
 
     Parameters:
-        text (str) -- input text
+        text (str) -- input text with [MASK]s
         model (str) -- encoder-only model
         tokenizer (str) -- tokenizer for model
         device (torch.device) --
         chunk_size (int) -- max input length
         num_preds (int) -- number of suggestions per word
         task_id (str) -- id for prediction task
-        progress_callback --
-        cancellation_event -- 
+        progress_callback -- async callback for progress updates
+        cancellation_event -- event check for task cancellation
 
     Returns:
         final_predictions (dict) -- {mask_token_index_1: [(predicted_token_1, probability_score_1), ...], ...}
     """
     
-    logging.info(f"Task {task_id}: Begin prediction task {task_id}")
+    logging.info(f"Task {task_id}: Begin word prediction task {task_id}")
 
     seed_value = 42
     np.random.seed(seed_value)
@@ -53,18 +53,19 @@ async def prediction_function(
     start_token = tokenizer.cls_token_id
     end_token = tokenizer.sep_token_id
 
-    await progress_callback(12.0, "Tokenizing text...")
+    await progress_callback(12.0, "Preparing text for model processing...")
     await cancel.check_cancel_status(cancellation_event, task_id)
 
     all_predictions = defaultdict(list)
     tokens_full = tokenizer.encode(text, add_special_tokens=False)
     num_tokens_full = len(tokens_full)
 
+    # find [MASK]s across whole txt
     global_mask_indices_to_process = {
         i for i, token_id in enumerate(tokens_full) if token_id == tokenizer.mask_token_id
     }
 
-    await progress_callback(15.0, "Chunking text...")
+    await progress_callback(15.0, "Dividing text into chunks...")
     await cancel.check_cancel_status(cancellation_event, task_id)
 
     chunk_start = 0

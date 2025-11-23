@@ -24,21 +24,26 @@ jobs:
       - name: Initialize Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.x
+          python-version: '3.11'
 
       - name: Install dependencies -- Win
         if: matrix.os == 'windows-latest'
         run: |
-          pip install -r requirements.txt || true
-          pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
+          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/nightly/cpu
 
       - name: Install dependencies -- macOS
         if: matrix.os == 'macos-latest'
         run: |
-          pip install -r requirements.txt || true
-          pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
-
-      - name: Build backend exec
+          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+      
+      - name: Build backend exec -- Win
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller --onefile --paths . --add-data "../resources/resources_config.yaml;." --add-data "../../requirements.txt;." --hidden-import=models --hidden-import=utils --hidden-import=features main.py
+        working-directory: ./src/backend/
+      
+      - name: Build backend exec -- macOS
+        if: matrix.os == 'macos-latest'
         run: |
           pyinstaller --onefile --paths . --add-data "../resources/resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=features main.py
         working-directory: ./src/backend/

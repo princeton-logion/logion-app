@@ -67,7 +67,7 @@ const DetectionResultsDisplay = ({
                 style={{
                     color: color,
                     cursor: 'pointer',
-                    borderBottom: activePopoverWord?.originalIndex === index ? '2px solid #007bff' : 'none'
+                    borderBottom: activePopoverWord?.originalIndex === index ? '2px solid #AA4499' : 'none'
                 }}
                 onClick={() => handleWordClick(wordData)}
             >
@@ -107,11 +107,12 @@ const DetectionResultsDisplay = ({
         <div className='d-flex'>
             <div className="col-md-7">
             <h6 className="mb-1 fw-bold">Original Text</h6>
+            <small className="text-muted fst-italic text-center d-block mb-2">Click a word to view suggested emendations.</small>
             <div className="text-highlight-container mb-3">
                 {coloredTextElements}
             </div>
 
-            <h6 className="mb-1 fw-bold">Emendation</h6>
+            <h6 className="mb-1 fw-bold">Suggested Text</h6>
             <div className="text-highlight-container mb-4" style={{ borderTop: '1px solid #ccc', paddingTop: '10px' }}>
                 {blackTextElements}
             </div>

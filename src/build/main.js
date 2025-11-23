@@ -3,10 +3,40 @@ const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
 const log = require('electron-log');
+const fs = require('fs');
+const dotenv = require('dotenv');
 
 // set log file
 log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
 const logFilePath = log.transports.file.getFile().path;
+
+function getEnvVars() {
+    // find app.env file and load
+    const envPath = app.isPackaged 
+        ? path.join(process.resourcesPath, 'app.env') 
+        : path.join(__dirname, 'app.env');
+    
+    let vars = { ...process.env };
+
+    if (fs.existsSync(envPath)) {
+        log.info(`Loading app.env from ${envPath}`);
+        const parsed = dotenv.parse(fs.readFileSync(envPath));
+        vars = { ...vars, ...parsed };
+    } else {
+        log.info('app.env file not found, using system env only');
+    }
+
+    // pass URL as is
+    if (vars.LOGION_RESOURCES_CONFIG) {
+        log.info(`Remote Config Source: ${vars.LOGION_RESOURCES_CONFIG}`);
+    }
+
+    return vars;
+}
+const appEnv = getEnvVars();
+const HOST = appEnv.LOGION_HOST || '127.0.0.1'; // default if missing
+const PORT = appEnv.LOGION_PORT || '8000';      // default if missing
+const BASE_URL = `http://${HOST}:${PORT}`;
 
 let backendProcess;
 let loadingWindow;
@@ -47,7 +77,7 @@ function createMainWindow() {
         },
     });
 
-    const startupURL = 'http://127.0.0.1:8000'; //dynamic load from env variables
+    const startupURL = BASE_URL;
 
     log.info(`[createMainWindow] Loading URL: ${startupURL}`);
         mainWindow.loadURL(startupURL);
@@ -72,7 +102,7 @@ function startBackend() {
     const isDev = process.env.NODE_ENV === 'development';
 
     if (isDev) {
-        backendPath = '/Users/jm9095/logion-app/src/backend/dist/main';
+        backendPath = DEV_PATH;
         if (process.platform === 'win32') {
             backendPath += '.exe';
         }
@@ -103,7 +133,7 @@ function startBackend() {
     try {
         backendProcess = spawn(backendPath, [], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...process.env, STATIC_DIR: staticDir },
+            env: { ...appEnv, STATIC_DIR: staticDir },
         });
         log.info('Backend API started.');
     } catch (err) {
@@ -134,9 +164,9 @@ function startBackend() {
 
 // check health endpoint for API server
 async function wait4ServerReady() {
-    const healthEndpoint = 'http://127.0.0.1:8000/health';
+    const healthEndpoint = `${BASE_URL}/health`;
     const retryInterval = 500; // 500 ms
-    const maxRetries = 120; // wait up to 1 min
+    const maxRetries = 240; // wait up 2 mins (for slow Win 1st open)
 
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -155,23 +185,36 @@ async function wait4ServerReady() {
 }
 
 app.whenReady().then(async () => {
-    createLoadingWindow(); // display load screen on launch
-    startBackend(); // start backend on launch
+    createLoadingWindow();
+    startBackend();
 
     const isBackendReady = await wait4ServerReady();
 
     if (isBackendReady) {
-        loadingWindow.close(); // close loading screen when API server ready
-        createMainWindow(); // open main window
+        loadingWindow.close();
+        createMainWindow();
     } else {
         log.error('Unable to start API server. Quit app.');
+        if (backendProcess) {
+            log.info('Terminating backend...');
+            backendProcess.kill(); 
+            backendProcess = null;
+        }
         app.quit();
+    }
+});
+
+
+// kill server when app quits
+app.on('before-quit', () => {
+    if (backendProcess) {
+        log.info('Terminating backend before close...');
+        backendProcess.kill();
+        backendProcess = null;
     }
 });
 
 // quit app
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+     app.quit();
 });

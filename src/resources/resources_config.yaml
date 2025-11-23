@@ -9,6 +9,14 @@ models:
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
 
+  - name: "Tiresias V1 (Char)"
+    model_path: "princeton-logion/char-model-linear-40"
+    type: "canine"
+
+  - name: "Tiresias V2 (Char)"
+    model_path: "princeton-logion/char-model-linear-30"
+    type: "canine"
+
 lev_filter:
    lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
    lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"

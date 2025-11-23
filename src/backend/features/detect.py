@@ -32,6 +32,9 @@ async def detection_function(
         chunk_size (int) -- max number of tokens for window
         lev (int) -- max Levenshtein distance between original words and suggested replacements
         no_beam (bool) -- enable/disable beam search for suggesting new words (True=disable beam search)
+        task_id (str) -- WebSocket id for detection task
+        progress_callback --
+        cancellation_event -- 
 
     Returns:
         Tuple comprised of:

@@ -9,25 +9,25 @@ import { useWebSocket } from '../contexts/WebSocketContext';
 import { renderStatusMsg } from '../utils/statusMsgHandler';
 import { handleTaskSubmit, handleTaskCancel } from '../utils/taskUtils';
 import { processWsMsg } from '../utils/wsMsgUtils';
-import WordPredictionResultsDisplay from '../components/WordPredictionResultsDisplay';
+import CharPredictionResultsDisplay from '../components/CharPredictionResultsDisplay';
 import DirectionsPopover from '../components/popOvers/DirectionsPopover';
 
-function WordPredictionPage() {
+function CharPredictionPage() {
     const [inputText, setInputText] = useState('');
     const [selectedModel, setSelectedModel] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [modelOptions, setModelOptions] = useState([]);
-    const [showWelcome, setShowDirections] = useState(false);
+    const [showDirections, setShowDirections] = useState(false);
     const { isConnected, sendMessage, addMessageHandler, removeMessageHandler } = useWebSocket();
     const [currentTask, setCurrentTask] = useState(null);
     // task state: { id, status, progress, message, results, error, statusCode }
 
     // first page visit?
     useEffect(() => {
-        const hasVisitedWordPred = sessionStorage.getItem('hasVisitedWordPred');
-        if (!hasVisitedWordPred) {
+        const hasVisitedCharPrediction = sessionStorage.getItem('hasVisitedCharPred');
+        if (!hasVisitedCharPrediction) {
             setShowDirections(true);
-            sessionStorage.setItem('hasVisitedWordPred', 'true');
+            sessionStorage.setItem('hasVisitedCharPred', 'true');
         }
     }, []);
 
@@ -75,10 +75,10 @@ function WordPredictionPage() {
 
     const taskSubmit = (event) => {
         const predictionOptions = {
-            taskType: "word_prediction",
+            taskType: "char_prediction",
             requestData: { model_name: selectedModel, text: inputText },
-            pendingMessage: "Submitting word prediction task...",
-            taskInProgressMessage: "Word prediction task already in progress."
+            pendingMessage: "Submitting character prediction task...",
+            taskInProgressMessage: "Character prediction task already in progress."
         };
         handleTaskSubmit(event, predictionOptions, isConnected, currentTask, setCurrentTask, sendMessage);
     };
@@ -130,7 +130,7 @@ function WordPredictionPage() {
     const cancelButtonClass = 'btn btn-danger ms-3';
 
     // directions popover content
-    const directionsTitle = "Logion Word Prediction";
+    const directionsTitle = "Logion Character Prediction";
     const directionsMain = (
         <>
         <p style={{ textAlign: 'left', }}>This page generates possible restorations for incomplete texts. To view missing text suggestions, follow these steps:</p>
@@ -141,15 +141,15 @@ function WordPredictionPage() {
         }}>
     <li><strong>Choose</strong> a model from the dropdown menu</li>
     <li><strong>Enter</strong> your text in the text area</li>
-    <li><strong>Type</strong> one dash (<strong>-</strong>) for each missing <span style={{ textDecoration: 'underline' }}>word</span>:
+    <li><strong>Type</strong> one dash (<strong>-</strong>) for each missing <span style={{ textDecoration: 'underline' }}>character</span>:
     <div style={{marginLeft: '10px', paddingLeft: '15px', textIndent: '-15px', color: '#555' }}>
-        <strong>Ex:</strong> <em>Οὐκ ἐμοῦ, ἀλλὰ τοῦ - ἀκούσαντας ὁμολογεῖν σοφόν ἐστιν Ἕν Πάντα εἶναι.</em>
+        <strong>Ex:</strong> <em>Οὐκ ἐμοῦ, ἀλλὰ τοῦ ----- ἀκούσαντας ὁμολογεῖν σοφόν ἐστιν Ἕν Πάντα εἶναι.</em>
         </div>
         </li>
     <li><strong>Click</strong> "Predict" to generate model suggestions</li>
     </ol>
     
-    <p style={{ marginTop: '16px', fontSize: '0.9em', color: 'gray' }}><em>Only use BERT models for word prediction.<br/>Models may take longer to load their first time.</em></p>
+    <p style={{ marginTop: '16px', fontSize: '0.9em', color: 'gray' }}><em>Only use models marked <span style={{ textDecoration: 'underline' }}>Char</span> for character prediction.<br/>Models may take longer to load their first time.</em></p>
     
     
     </>);
@@ -158,7 +158,7 @@ function WordPredictionPage() {
     return (
         <div>
             <DirectionsPopover 
-                isOpen={showWelcome}
+                isOpen={showDirections}
                 onClose={handleCloseDirections}
                 pageTitle={directionsTitle}
                 pageDirections={directionsMain}
@@ -169,7 +169,7 @@ function WordPredictionPage() {
                     <div className="d-flex align-items-center mb-4">
                         <button className="btn btn-outline-dark me-auto" onClick={toggleSidebar}>☰ Menu</button>
                         <Sidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar}/>
-                        <h1 className="text-center flex-grow-1 m-0">Word Prediction</h1>
+                        <h1 className="text-center flex-grow-1 m-0">Character Prediction</h1>
                     </div>
                     <div className="d-flex mb-4">
                         <div><p className='inline-label'>Select model: </p>
@@ -188,7 +188,7 @@ function WordPredictionPage() {
                                         style={{ fontSize: '14px', height: '300px' }}
                                         value={inputText}
                                         onChange={(e) => setInputText(e.target.value)}
-                                        placeholder='Enter text with "-" for each missing word'
+                                        placeholder='Enter text with "-" for each missing character'
                                     />
                                 </div>
                                 <div>
@@ -200,7 +200,7 @@ function WordPredictionPage() {
                                 <ProgressBar now={barValue} variant={barColor} style={{height: '5px'}}/>
                             </div>
                             {renderStatusMsg(isConnected, currentTask)}
-                            <WordPredictionResultsDisplay 
+                            <CharPredictionResultsDisplay 
                                 taskStatus={currentTask?.status}
                                 predictions={predictionsToDisplay}
                                 displayText={textToDisplay}
@@ -213,4 +213,4 @@ function WordPredictionPage() {
     );
 }
 
-export default WordPredictionPage;
+export default CharPredictionPage;

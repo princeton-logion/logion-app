@@ -4,6 +4,7 @@
 *.log
 vale-edit.py
 vale_output.json
+.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -15,6 +16,7 @@ __pycache__/
 *.egg-info/
 *.egg
 build/
+!src/build/
 dist/
 *.sif
 

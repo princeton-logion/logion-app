@@ -19,8 +19,12 @@ function Sidebar({ sidebarOpen, toggleSidebar }) {
 
         <div className='nav-title'>Philological Tasks</div>
 
-        <li className={location.pathname === "/prediction" ? "active" : ""}>
-          <Link to="/prediction">Word Prediction</Link>
+        <li className={location.pathname === "/word_prediction" ? "active" : ""}>
+          <Link to="/word_prediction">Word Prediction</Link>
+        </li>
+
+        <li className={location.pathname === "/char_prediction" ? "active" : ""}>
+          <Link to="/char_prediction">Character Prediction</Link>
         </li>
 
         <li className={location.pathname === "/detection" ? "active" : ""}>

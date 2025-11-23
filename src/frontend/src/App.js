@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import MainPage from './pages/MainPage';
-import PredictionPage from './pages/PredictionPage';
+import WordPredictionPage from './pages/PredictionPage';
+import CharPredictionPage from './pages/CharPredictionPage';
 import DetectionPage from './pages/DetectionPage';
 import Sidebar from './components/Sidebar';
 import { WebSocketProvider } from './contexts/WebSocketContext';
@@ -24,7 +25,8 @@ function App() {
         <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
           <Routes>
             <Route path="/" element={<MainPage />} />
-            <Route path="/prediction" element={<PredictionPage />} />
+            <Route path="/word_prediction" element={<WordPredictionPage />} />
+            <Route path="/char_prediction" element={<CharPredictionPage />} />
             <Route path="/detection" element={<DetectionPage />} />
           </Routes>
         </div>

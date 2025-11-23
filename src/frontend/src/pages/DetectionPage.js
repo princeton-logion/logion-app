@@ -11,6 +11,7 @@ import { handleTaskSubmit, handleTaskCancel } from '../utils/taskUtils'
 import { processWsMsg } from '../utils/wsMsgUtils'
 import DetectionResultsDisplay from '../components/DetectionResultsDisplay';
 import LevDistPopover from '../components/popOvers/LevDistPopover'
+import DirectionsPopover from '../components/popOvers/DirectionsPopover';
 
 function DetectionPage() {
     const [inputText, setInputText] = useState('');
@@ -21,9 +22,19 @@ function DetectionPage() {
     const popoverRef = useRef(null);
     const wordRef = useRef(null);
     const [modelOptions, setModelOptions] = useState([]);
+    const [showDirections, setShowDirections] = useState(false);
     const { isConnected, sendMessage, addMessageHandler, removeMessageHandler } = useWebSocket();
     const [currentTask, setCurrentTask] = useState(null);
     // task state: { id, status, progress, message, results, error }
+
+    // first page visit?
+    useEffect(() => {
+        const hasVisitedErrDetect = sessionStorage.getItem('hasVisitedErrDetect');
+        if (!hasVisitedErrDetect) {
+            setShowDirections(true);
+            sessionStorage.setItem('hasVisitedErrDetect', 'true');
+        }
+    }, []);
 
     useEffect(() => {
       fetch("models")
@@ -49,6 +60,10 @@ function DetectionPage() {
 
     const handleLevDistChange = (e) => {
        setSelectedLevDist(parseInt(e.target.value, 10));
+    };
+
+    const handleCloseDirections = () => {
+        setShowDirections(false);
     };
 
     // WebSocket task msg handler
@@ -138,10 +153,39 @@ function DetectionPage() {
     const detectButtonClass = detectButtonDisabled ? 'btn btn-secondary' : 'btn btn-primary';
     const cancelButtonClass = 'btn btn-danger ms-3';
 
+    // directions popover content
+    const directionsTitle = "Logion Error Detection";
+    const directionsMain = (
+        <>
+        <p style={{ textAlign: 'left', }}>This page generates possible emendations for complete texts. To view text emendations, follow these steps:</p>
+    <ol style={{ 
+            textAlign: 'left', 
+            paddingLeft: '40px',
+            display: 'inline-block' 
+        }}>
+    <li><strong>Choose</strong> a model from the dropdown menu</li>
+    <li><strong>Choose</strong> a Levenshtein distance from the dropdown menu</li>
+    <li><strong>Enter</strong> your <span style={{ textDecoration: 'underline' }}>complete</span> text in the text area</li>
+    <div style={{marginLeft: '10px', paddingLeft: '15px', textIndent: '-15px', color: '#555' }}>
+        <strong>Ex:</strong> <em>οὐκ ἐμοῦ ἀλλὰ τοῦ λόγου ἀκούσαντας ὁμολογεῖν σοφόν ἐστιν ἓν πάντα εἶναι</em>
+        </div>
+    <li><strong>Click</strong> "Detect Errors" to generate model suggestions</li>
+    </ol>
+    
+    <p style={{ marginTop: '16px', fontSize: '0.9em', color: 'gray' }}><em>Models may take longer to load their first time.</em></p>
+    
+    
+    </>);
 
-// page main content
+    // page main content
     return (
         <div>
+            <DirectionsPopover 
+                isOpen={showDirections}
+                onClose={handleCloseDirections}
+                pageTitle={directionsTitle}
+                pageDirections={directionsMain}
+            />
             {sidebarOpen && <div className="content-overlay" onClick={toggleSidebar}></div>}
             <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
                 <div className='container mt-5'>

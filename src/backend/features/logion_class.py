@@ -25,9 +25,9 @@ class Logion:
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
-        #self.blacklist = blacklist.blacklist
-        #self.blacklist_ids = set(self.blacklist.keys())
-        #self.blacklist_chars = set(self.blacklist.values())
+        self.blacklist = blacklist.blacklist
+        self.blacklist_ids = set(self.blacklist.keys())
+        self.blacklist_chars = set(self.blacklist.values())
 
     
     def _get_chance_probability(
@@ -291,8 +291,8 @@ class Logion:
         no_beam=False
     ):
 
-        #if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
-            #return [(transmitted_text, 0.0)]
+        if len(transmitted_tokens) == 1 and transmitted_tokens[0] in self.blacklist_ids:
+            return [(transmitted_text, 0.0)]
 
         best_suggestion = (transmitted_text, 0.0)
 
@@ -332,8 +332,8 @@ class Logion:
 
         # if none better than orig or blacklisted, return orig
         filtered_suggestion = best_suggestion[0]
-        #if (filtered_suggestion != transmitted_text and filtered_suggestion not in self.blacklist_chars):
-        if filtered_suggestion != transmitted_text:
+        if (filtered_suggestion != transmitted_text and filtered_suggestion not in self.blacklist_chars):
+        #if filtered_suggestion != transmitted_text:
             return [best_suggestion]
         else:
             return [(transmitted_text, 0.0)]

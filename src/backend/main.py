@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import model_loader, lev_filter_loader, resource_config_loader
 from utils import prediction_schemas, detection_schemas, ws_schemas
-from features import predict, detect, logion_class, cancel
+from features import predict, predict_char, detect, logion_class, cancel
 import random
 import include
 import uvicorn
@@ -165,18 +165,18 @@ async def run_prediction_task(
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
 
         text = request_data.text
-        text = re.sub(r"\?", "[MASK]", text)
+        text_w_mask = re.sub(r"\-", "[MASK]", text)
 
         await progress_callback(10.0, "Initiating word prediction")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
         results = await predict.prediction_function(
-            text=text,
+            text=text_w_mask,
             model=model,
             tokenizer=tokenizer,
             device=device,
-            chunk_size=510,
-            num_predictions=5,
+            chunk_size=500,
+            num_preds=5,
             task_id=task_id,
             progress_callback=progress_callback,
             cancellation_event=cancellation_event
@@ -187,6 +187,8 @@ async def run_prediction_task(
 
         await progress_callback(98.0, "Formatting results")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
+
+        orig_txt = text
 
         # format results for response class
         formatted_results = {}
@@ -202,13 +204,126 @@ async def run_prediction_task(
         final_response = prediction_schemas.PredictionResponse(predictions=formatted_results)
         await progress_callback(100.0, "Word prediction complete.")
 
-        return final_response.dict()
+        # Return both predictions and cleaned_text
+        response_dict = final_response.dict()
+        response_dict['origText'] = orig_txt
+        logging.info(f"Response: {response_dict}")
+        
+        return response_dict
 
     except asyncio.CancelledError:
         logging.info(f"Task {task_id}: User cancelled word prediction task.")
         return None
     except Exception as e:
         logging.info(f"Task {task_id}: Error during word prediction task: {e}")
+        raise
+
+
+async def run_char_prediction_task(
+    request_data: prediction_schemas.PredictionRequest,
+    task_id: str,
+    progress_callback: ProgressCallback,
+    cancellation_event: asyncio.Event
+) -> Dict[str, Any]:
+    """
+    Runs word prediction task asynchronously. Steps include:
+        - Loads model/tokenizer
+        - Passese items from PredictionRequest to prediction_function()
+        - Format prediction_function() results for front-end
+    
+    Parameters:
+        request_data (PredictionRequest) -- data from front-end (contains text with '?' and model_name)
+        task_id (str) -- task UID
+        progress_callback (ProgressCallback) -- callback function to report progress
+        cancellation_event (asyncio.Event) -- event object signaling task cancellation
+    
+    Returns:
+        Dict[str, Any] -- dictionary containing formatted word prediction results
+    """
+    try:
+        # receive model name from front-end and retrieve via model_config file
+        frontend_selection = request_data.model_name
+        model_info = next(
+            (m for m in MODELS_CONFIG if m["name"] == frontend_selection), None
+        )
+        if not model_info:
+            logging.warning(f"Task {task_id}: Unable to load {frontend_selection}")
+            raise HTTPException(status_code=422, detail=f"{frontend_selection} not available.")
+        
+        # load model from HF Hub to device via config
+        await progress_callback(5.0, f"Loading {frontend_selection} model")
+        if await cancel.check_cancel_status(cancellation_event, task_id): return None
+
+        model_name = model_info["model_path"]
+        model_type = model_info["type"]
+
+        try:
+            model, char_stoi, char_itos, mask_id = model_loader.load_character_mlm(model_name)
+            # model = model_loader.patch_char_model_for_mps(model)
+            # device, model = model_loader.load_device(model)
+            # use cpu until MPS error resolved
+            logging.info(f"CUDA available: {torch.cuda.is_available()}")
+            device = torch.device("cpu")
+            logging.info(f"Using device {device}.")
+            model = model.to(device)
+        except Exception as e:
+            logging.info(f"Task {task_id}: Unable to load model: {e}")
+            raise HTTPException(status_code=500, detail="Unable to load model.") from e
+
+        text = request_data.text
+        text_w_mask = re.sub(r"\-", "[MASK]", text)
+
+        await progress_callback(10.0, "Initiating word prediction")
+        if await cancel.check_cancel_status(cancellation_event, task_id): return None
+
+        results = await predict_char.char_prediction_function(
+            text=text_w_mask,
+            model=model,
+            char_stoi=char_stoi,
+            char_itos=char_itos,
+            mask_id=mask_id,
+            device=device,
+            chunk_size=2048,
+            num_preds=1,
+            task_id=task_id,
+            progress_callback=progress_callback,
+            cancellation_event=cancellation_event
+        )
+        if results is None:
+             logging.info(f"Task {task_id}: Cannot process text prediction.")
+             return None
+
+        await progress_callback(98.0, "Formatting results")
+        if await cancel.check_cancel_status(cancellation_event, task_id): return None
+
+        orig_txt = text
+
+        # format results for response class
+        formatted_results = {}
+        for masked_index, predictions in results.items():
+            token_predictions = [
+                prediction_schemas.TokenPrediction(token=pred[0], probability=pred[1])
+                for pred in predictions
+            ]
+            formatted_results[masked_index] = prediction_schemas.MaskedIndexPredictions(
+                predictions=token_predictions
+            )
+
+        final_response = prediction_schemas.PredictionResponse(predictions=formatted_results)
+        await progress_callback(100.0, "Character prediction complete.")
+
+        # Return both predictions and cleaned_text
+        response_dict = final_response.dict()
+        response_dict['origText'] = orig_txt
+        logging.info(f"Response: {response_dict}")
+        
+        return response_dict
+
+    except asyncio.CancelledError:
+        logging.info(f"Task {task_id}: User cancelled character prediction task.")
+        return None
+    except Exception as e:
+        logging.info(f"Task {task_id}: Error during character prediction task: {e}")
         raise
 
 
@@ -365,7 +480,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                 task_id = data.get("task_id")
 
 
-                if message_type == "start_prediction":
+                if message_type == "start_word_prediction":
                     """
                     Execute Word Prediction task
                     """
@@ -400,6 +515,47 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
                     task = asyncio.create_task(
                         run_prediction_task(request, task_id, progress_callback, cancellation_event)
+                    )
+                    active_tasks[task_id] = (task, cancellation_event)
+                    task.add_done_callback(
+                        lambda t: handle_task_completion(t, task_id, websocket)
+                    )
+
+                elif message_type == "start_char_prediction":
+                    """
+                    Execute Character Prediction task
+                    """
+                    # check active tasks first
+                    if task_id in active_tasks:
+                         await send_message(websocket, {"type": "error", "task_id": task_id, "detail": "Task ID already exists"})
+                         continue
+
+                    request_data = data.get("request_data", {})
+                    try:
+                        # validate against pydantic schema
+                        request = prediction_schemas.PredictionRequest(**request_data)
+                    except pydantic.ValidationError as e:
+                        logging.info(f"Task {task_id}: Invalid character prediction request data: {e}")
+                        await send_message(
+                            websocket, 
+                            ws_schemas.ServerErrorMsg(
+                                type="error", 
+                                task_id=task_id, 
+                                detail=f"Invalid request data: {str(e)}",
+                                status_code=422
+                            ).dict()
+                        )
+                        continue
+
+                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Character prediction task received").dict())
+
+                    cancellation_event = asyncio.Event()
+
+                    async def progress_callback(percentage: float, message: str):
+                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
+
+                    task = asyncio.create_task(
+                        run_char_prediction_task(request, task_id, progress_callback, cancellation_event)
                     )
                     active_tasks[task_id] = (task, cancellation_event)
                     task.add_done_callback(
