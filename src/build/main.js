@@ -166,7 +166,7 @@ function startBackend() {
 async function wait4ServerReady() {
     const healthEndpoint = `${BASE_URL}/health`;
     const retryInterval = 500; // 500 ms
-    const maxRetries = 240; // wait up 2 mins (for slow Win 1st open)
+    const maxRetries = 480; // wait up 2 mins (for slow Win 1st open)
 
     for (let i = 0; i < maxRetries; i++) {
         try {

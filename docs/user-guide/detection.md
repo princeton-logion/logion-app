@@ -1,10 +1,10 @@
 # Error detection
 
-Logion's error detection feature predicts the likelihood that each word in a given sequence is an error. Here, *error* means a word that has been mistranscribed at some point in the textual history. Logion further offers suggestions as to what a possible "correct" word may be.
+Logion's error detection feature predicts the likelihood that each word in a given sequence is an error. Here, *error* means a word that has been mistranscribed at some point in the textual history. Logion further offers suggestions of possible emendations for words according to their error probability.
 
 ## How to use Logion error detection
 
-From the main menu, go to to to the error detection window by clicking **Error detection** on the right-hand side of the main menu. Once you are in the Error Detection page, follow these steps to generate an error report for your text.
+From the main menu, go to to to the error detection window by clicking **Error detection** on the main menu. Once you are in the Error Detection page, follow these steps to generate an error report for your text.
 
 1. **Select** a model from the drop-down menu in the upper-left of the window. If this is your first time, we recommend beginning with **Base BERT**. [This model](https://huggingface.co/princeton-logion/LOGION-50k_wordpiece) is trained on a wide selection of premodern Greek and is suitable for general error detection.
 

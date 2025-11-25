@@ -10,10 +10,10 @@ After you access the Dropbox folder, follow these instructions to download and i
 
 1. Click the "**⋯**" icon and select **Download** from the pop-up menu. This downloads the app .zip file.
 
-1. When the download finishes, go to your **Downloads** folder and double-click the Logion .zip file. This unzips the app into a new folder.
+1. When the download finishes, go to your **Downloads** folder and unzip the app into a new folder.
 
 1. Inside the resultant folder, double-click the Logion app to open Logion on your system.
 
-    - If running on Windows, you may receive saying "Windows Protected Your PC." Click **More info** and then click **Run anyway**.
+    - If running on Windows, you may encounter a pop-up that states "Windows Protected Your PC." Click **More info** and then **Run anyway**.
 
 If your institution restricts installations, you may need to contact your IT administrator to temporarily enable installation permissions on your device.
