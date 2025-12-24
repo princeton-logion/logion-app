@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import model_loader, lev_filter_loader, resource_config_loader
 from utils import prediction_schemas, detection_schemas, ws_schemas
-from features import predict, predict_char, detect, logion_class, cancel
+from features import predict, predict_char_auto, detect, logion_class, cancel
 import random
 import include
 import uvicorn
@@ -276,7 +276,7 @@ async def run_char_prediction_task(
         await progress_callback(10.0, "Initiating word prediction")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
-        results = await predict_char.char_prediction_function(
+        results = await predict_char_auto.char_prediction_function(
             text=text_w_mask,
             model=model,
             char_stoi=char_stoi,
@@ -284,7 +284,7 @@ async def run_char_prediction_task(
             mask_id=mask_id,
             device=device,
             chunk_size=2048,
-            num_preds=1,
+            num_preds=5,
             task_id=task_id,
             progress_callback=progress_callback,
             cancellation_event=cancellation_event

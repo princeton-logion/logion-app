@@ -9,6 +9,11 @@ models:
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
 
+  - name: "ATE BERT"
+    model_path: "princeton-logion/logion-bert-ate"
+    type: "bert"
+    tokenizer_path: "princeton-logion/logion-bert-base"
+
   - name: "Tiresias V1 (Char)"
     model_path: "princeton-logion/char-model-linear-40"
     type: "canine"

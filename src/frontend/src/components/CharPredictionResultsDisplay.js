@@ -87,25 +87,24 @@ const CharPredictionResultsDisplay = ({
                 };
 
                 // each char individually clickable
+                const spanToken = consecutiveBatch[0].token;
+                const firstKey = consecutiveBatch[0].key;
+                const isSelected = activePredictionKey === firstKey;
+                
                 elements.push(
                     <span key={`group-${predIndex}`} style={wrapperStyle}>
                         [
-                        {consecutiveBatch.map((item) => {
-                            const isSelected = activePredictionKey === item.key;
-                            return (
                                 <span 
-                                    key={item.key}
-                                    onClick={(e) => handleCharClick(e, item.key)}
+                                    key={firstKey}
+                                    onClick={(e) => handleCharClick(e, firstKey)}
                                     style={{
                                         cursor: 'pointer',
                                         borderBottom: isSelected ? '2px solid #AA4499' : 'none',
                                         backgroundColor: isSelected ? 'rgba(170, 68, 153, 0.1)' : 'transparent'
                                     }}
                                 >
-                                    {item.token}
+                                    {spanToken}
                                 </span>
-                            );
-                        })}
                         ]
                     </span>
                 );
