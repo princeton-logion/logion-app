@@ -6,7 +6,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from models import model_loader, lev_filter_loader, resource_config_loader
+from models import model_loader, resource_config_loader #, lev_filter_loader
 from utils import prediction_schemas, detection_schemas, ws_schemas
 from features import predict, predict_char_auto, detect, logion_class, cancel
 import random
@@ -131,7 +131,7 @@ async def run_prediction_task(
         - Format prediction_function() results for front-end
     
     Parameters:
-        request_data (PredictionRequest) -- data from front-end (contains text with '?' and model_name)
+        request_data (PredictionRequest) -- data from front-end (contains text with '-', model_name, and text_type)
         task_id (str) -- task UID
         progress_callback (ProgressCallback) -- callback function to report progress
         cancellation_event (asyncio.Event) -- event object signaling task cancellation
@@ -165,6 +165,7 @@ async def run_prediction_task(
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
 
         text = request_data.text
+        text_type = request_data.text_type  
         text_w_mask = re.sub(r"\-", "[MASK]", text)
 
         await progress_callback(10.0, "Initiating word prediction")
@@ -179,13 +180,14 @@ async def run_prediction_task(
             num_preds=5,
             task_id=task_id,
             progress_callback=progress_callback,
-            cancellation_event=cancellation_event
+            cancellation_event=cancellation_event,
+            text_type=text_type, 
         )
         if results is None:
              logging.info(f"Task {task_id}: Cannot process text prediction.")
              return None
 
-        await progress_callback(98.0, "Formatting results")
+        await progress_callback(99.0, "Formatting results")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
         orig_txt = text
@@ -232,7 +234,7 @@ async def run_char_prediction_task(
         - Format prediction_function() results for front-end
     
     Parameters:
-        request_data (PredictionRequest) -- data from front-end (contains text with '?' and model_name)
+        request_data (PredictionRequest) -- data from front-end (contains text with '-' and model_name)
         task_id (str) -- task UID
         progress_callback (ProgressCallback) -- callback function to report progress
         cancellation_event (asyncio.Event) -- event object signaling task cancellation
@@ -293,7 +295,7 @@ async def run_char_prediction_task(
              logging.info(f"Task {task_id}: Cannot process text prediction.")
              return None
 
-        await progress_callback(98.0, "Formatting results")
+        await progress_callback(99.0, "Formatting results")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
 
         orig_txt = text

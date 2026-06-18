@@ -15,6 +15,7 @@ Input Class
 class PredictionRequest(BaseModel):
     text: str
     model_name: str
+    text_type: str = "prose"
 
     @field_validator("text")
     def check_mask_presence(cls: type, value: str) -> str:
@@ -32,6 +33,13 @@ class PredictionRequest(BaseModel):
     def model_not_null(cls: type, value: str) -> str:
         if not value.strip():
             raise ValueError("No model selected. User must select model.")
+        return value
+    
+    @field_validator("text_type")
+    def validate_text_type(cls: type, value: str) -> str:
+        allowed = {"prose", "hexameter"}
+        if value not in allowed:
+            raise ValueError("text_type must be one of the following: 'prose', 'hexameter'.")
         return value
 
 
@@ -75,7 +83,6 @@ class PredictionResponse(BaseModel):
                raise ValueError("Dictionary key for mask index must be an integer.")
            if not isinstance(pred_list, MaskedIndexPredictions):
                raise ValueError(
-                   "Value for mask index key must be a MaskedIndexPredictions list"
-                   " object."
+                   "Value for mask index key must be a MaskedIndexPredictions list object."
                )
        return predictions
