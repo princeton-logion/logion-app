@@ -9,6 +9,9 @@ from . import cancel, predict_utils
 # type hint for callback
 ProgressCallback = Callable[[float, str], Coroutine[Any, Any, None]]
 
+# 
+HEX_FILTER_POOL_FACTOR = 4
+
 
 async def prediction_function(
         text: str,
@@ -19,7 +22,11 @@ async def prediction_function(
         num_preds: int,
         task_id: str,
         progress_callback: ProgressCallback,
-        cancellation_event: asyncio.Event
+        cancellation_event: asyncio.Event,
+        text_type: str = "prose",
+        use_macronizer: bool = False,
+        max_combos: int = 200,
+        pool_size: int = None,
         ) -> Dict[int, List[Tuple[str, float]]]:
     """
     Masked language modeling inference for lacuna predictions using sliding window
@@ -34,6 +41,10 @@ async def prediction_function(
         task_id (str) -- id for prediction task
         progress_callback -- async callback for progress updates
         cancellation_event -- event check for task cancellation
+        text_type (str) -- input text type (determines use of hex_filter)
+        use_macronizer (bool) -- resolve ambiguous vowels (α, ι, υ) w/ grc_macronizer? (deafult: False = no)
+        max_combos (int) -- per-line max exhaustive metrical vetting
+        pool_size (int) -- 
 
     Returns:
         final_predictions (dict) -- {mask_token_index_1: [(predicted_token_1, probability_score_1), ...], ...}
@@ -49,6 +60,14 @@ async def prediction_function(
         logging.info(f"Task {task_id}: Input text cannot be empty.")
         await progress_callback(100.0, "Input text cannot be empty.")
         return {}
+
+    # for max possible preds, hex_filter filters pool, then reduces to num_preds
+    if pool_size is None:
+        pool_size = (
+            num_preds * HEX_FILTER_POOL_FACTOR if text_type == "hexameter"
+            else num_preds
+        )
+    pool_size = max(pool_size, num_preds)
     
     start_token = tokenizer.cls_token_id
     end_token = tokenizer.sep_token_id
@@ -120,6 +139,7 @@ async def prediction_function(
                     tokenizer=tokenizer,
                     num_preds=num_preds,
                     task_id=task_id,
+                    pool_size=pool_size,
                     cancellation_event=cancellation_event
                 )
 
@@ -132,7 +152,7 @@ async def prediction_function(
     await progress_callback(95.0, "Gathering all predictions...")
     await cancel.check_cancel_status(cancellation_event, task_id)
 
-    # compile predictions and rmv duplicates
+    # compile preds and rmv duplicates
     final_predictions = {}
     for masked_index, prediction_list in all_predictions.items():
         sorted_predictions = sorted(prediction_list, key=lambda x: x[1], reverse=True)
@@ -140,8 +160,21 @@ async def prediction_function(
         for word, prob in sorted_predictions:
             if word not in unique_preds:
                 unique_preds[word] = prob
-        final_predictions[masked_index] = list(unique_preds.items())[:num_preds]
+        final_predictions[masked_index] = list(unique_preds.items())[:pool_size]
+
+    # filter preds per hex_filter
+    if text_type == "hexameter":
+        await progress_callback(96.0, "Filtering predictions per hexameter...")
+        await cancel.check_cancel_status(cancellation_event, task_id)
+        final_predictions = predict_utils.filter_predictions_hexameter(
+            text=text,
+            final_predictions=final_predictions,
+            tokenizer=tokenizer,
+            use_macronizer=use_macronizer,
+            max_combos=max_combos,
+            num_preds=num_preds,
+        )
 
     #logging.info(f"Task {task_id}: Final predictions: {type(final_predictions)}\n{final_predictions}")
-    await progress_callback(97.0, "Generated predictions.")
+    await progress_callback(99.0, "Generated predictions.")
     return final_predictions

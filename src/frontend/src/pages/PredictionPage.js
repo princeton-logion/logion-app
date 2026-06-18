@@ -15,6 +15,7 @@ import DirectionsPopover from '../components/popOvers/DirectionsPopover';
 function WordPredictionPage() {
     const [inputText, setInputText] = useState('');
     const [selectedModel, setSelectedModel] = useState('');
+    const [selectedTextType, setSelectedTextType] = useState('prose');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [modelOptions, setModelOptions] = useState([]);
     const [showWelcome, setShowDirections] = useState(false);
@@ -51,6 +52,10 @@ function WordPredictionPage() {
         setSelectedModel(e.target.value);
     };
 
+    const handleTextTypeChange = (e) => {
+        setSelectedTextType(e.target.value);
+    };
+
     const handleCloseDirections = () => {
         setShowDirections(false);
     };
@@ -76,7 +81,7 @@ function WordPredictionPage() {
     const taskSubmit = (event) => {
         const predictionOptions = {
             taskType: "word_prediction",
-            requestData: { model_name: selectedModel, text: inputText },
+            requestData: { model_name: selectedModel, text: inputText, text_type: selectedTextType },
             pendingMessage: "Submitting word prediction task...",
             taskInProgressMessage: "Word prediction task already in progress."
         };
@@ -175,6 +180,12 @@ function WordPredictionPage() {
                         <div><p className='inline-label'>Select model: </p>
                             <select className="form-select model-select" value={selectedModel} onChange={handleModelChange}>
                                 {modelOptions.map((model, index) => (<option key={index} value={model}>{model}</option>))}
+                            </select>
+                        </div>
+                        <div className="ms-4"><p className='inline-label'>Select text type: </p>
+                            <select className="form-select model-select" value={selectedTextType} onChange={handleTextTypeChange}>
+                                <option value="prose">Prose</option>
+                                <option value="hexameter">Hexameter</option>
                             </select>
                         </div>
                     </div>
