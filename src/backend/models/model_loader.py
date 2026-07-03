@@ -1,4 +1,5 @@
 from transformers import (
+    AutoTokenizer,
     BertTokenizer,
     BertForMaskedLM,
     ElectraTokenizer,
@@ -164,7 +165,7 @@ def load_character_mlm(model_path: str, vocab_path: str = None, use_auth_token: 
     
     return model, char_stoi, char_itos, mask_id
 
-def load_encoder(model_path: str, model_type: str, tokenizer_path: str):
+def load_encoder(model_path: str, model_type: str, tokenizer_path: str, trust_remote_code: bool=False):
     """
     Load encoder model using HF transformers library
 
@@ -180,7 +181,10 @@ def load_encoder(model_path: str, model_type: str, tokenizer_path: str):
     try:
         logging.info(f"Loading model from {model_path}\nLoading tokenizer from {tokenizer_path}")
         if model_type == "bert":
-            tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
+            if trust_remote_code:
+                tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+            else:
+                tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
             model = BertForMaskedLM.from_pretrained(model_path)
         else:
             raise ValueError(f"Invalid model/tokenizer selected.")

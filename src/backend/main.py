@@ -156,16 +156,25 @@ async def run_prediction_task(
         model_name = model_info["model_path"]
         model_type = model_info["type"]
         tokenizer_path = model_info["tokenizer_path"]
+        model_lang = model_info["lang"]
+        trust_remote_code = model_info.get("trust_remote_code", False)
+
+        text = request_data.text
+        text_type = request_data.text_type  
+
+        if model_lang == "la" and text_type == "hexameter":
+            raise HTTPException(
+                status_code=422,
+                detail = "Latin BERT cannot be used with hexameter text type"
+            )
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path)
+            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path, trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
 
-        text = request_data.text
-        text_type = request_data.text_type  
         text_w_mask = re.sub(r"\-", "[MASK]", text)
 
         await progress_callback(10.0, "Initiating word prediction")
@@ -258,6 +267,16 @@ async def run_char_prediction_task(
 
         model_name = model_info["model_path"]
         model_type = model_info["type"]
+        model_lang = model_info["lang"]
+
+        text = request_data.text
+        text_type = request_data.text_type  
+
+        if model_lang == "la" and text_type == "hexameter":
+            raise HTTPException(
+                status_code=422,
+                detail = "Latin BERT cannot be used with hexameter text type"
+            )
 
         try:
             model, char_stoi, char_itos, mask_id = model_loader.load_character_mlm(model_name)
@@ -370,10 +389,11 @@ async def run_detection_task(
         model_name = model_info["model_path"]
         model_type = model_info["type"]
         tokenizer_path = model_info["tokenizer_path"]
+        trust_remote_code = model_info.get("trust_remote_code", False)
         lev_distance = request_data.lev_distance
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path)
+            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path, trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
@@ -712,7 +732,7 @@ async def health_check():
 """
 Model retrieval endpoint
 """
-@app.get("/models", response_model=list[str])
+@app.get("/models")
 async def get_models():
     """
     Returns list of available model names loaded at startup.
@@ -725,8 +745,15 @@ async def get_models():
             detail="Model configurations currently unavailable."
         )
     try:
-        model_names = [model["name"] for model in MODELS_CONFIG]
-        return model_names
+        models = [
+            {
+                "name": model["name"],
+                "type": model["type"],
+                "lang": model["lang"]
+            }
+            for model in MODELS_CONFIG
+        ]
+        return models
     except Exception as e:
         logging.info(f"Unexpected error in /models endpoint: {e}")
         raise HTTPException(status_code=500, detail="Unable to access models.")
