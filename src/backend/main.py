@@ -117,6 +117,14 @@ async def send_message(websocket: WebSocket, message: Dict[str, Any]) -> None:
 
 ProgressCallback = Callable[[float, str], Coroutine[Any, Any, None]]
 
+def clean_prediction_token(token: str, model_lang: str) -> str:
+    """
+    Clean model-specific tokenizer artifacts before sending predictions to frontend.
+    LatinBERT uses underscore markers in its tokenizer vocabulary.
+    """
+    if model_lang == "la":
+        return token.rstrip("_")
+    return token
 
 async def run_prediction_task(
     request_data: prediction_schemas.PredictionRequest,
@@ -205,7 +213,7 @@ async def run_prediction_task(
         formatted_results = {}
         for masked_index, predictions in results.items():
             token_predictions = [
-                prediction_schemas.TokenPrediction(token=pred[0], probability=pred[1])
+                prediction_schemas.TokenPrediction(token=clean_prediction_token(pred[0], model_lang), probability=pred[1])
                 for pred in predictions
             ]
             formatted_results[masked_index] = prediction_schemas.MaskedIndexPredictions(
