@@ -3,8 +3,6 @@ import requests
 from typing import Dict
 import yaml
 
-
-
 def load_resource_config(config_path: str) -> Dict:
     """
     Loads model config .yaml file file from url (desktop).

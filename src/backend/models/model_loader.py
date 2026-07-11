@@ -5,6 +5,8 @@ from transformers import (
     ElectraTokenizer,
     ElectraForMaskedLM,
 )
+from .latin_tokenizer import LatinTokenizerAdapter
+from .subword_text_encoder import SubwordTextEncoder
 import torch
 import logging
 import platform
@@ -165,7 +167,7 @@ def load_character_mlm(model_path: str, vocab_path: str = None, use_auth_token: 
     
     return model, char_stoi, char_itos, mask_id
 
-def load_encoder(model_path: str, model_type: str, tokenizer_path: str, trust_remote_code: bool=False):
+def load_encoder(model_path: str, model_type: str, tokenizer_path: str, model_lang: str, subword_encoder_path: str):
     """
     Load encoder model using HF transformers library
 
@@ -173,6 +175,7 @@ def load_encoder(model_path: str, model_type: str, tokenizer_path: str, trust_re
         model_path (str) -- path to local model or model repo (from config)
         model_type (str) -- model achitecture (from conifg)
         tokenizer_path (str) -- path to local tokenizer or tokenizer repo (from config)
+        subword_encoder_path (str) -- path to tensor2tensor vocab file
 
     Return:
         model (eval mode)
@@ -181,8 +184,9 @@ def load_encoder(model_path: str, model_type: str, tokenizer_path: str, trust_re
     try:
         logging.info(f"Loading model from {model_path}\nLoading tokenizer from {tokenizer_path}")
         if model_type == "bert":
-            if trust_remote_code:
-                tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+            if model_lang == "la":
+                encoder = SubwordTextEncoder(subword_encoder_path)
+                tokenizer = LatinTokenizerAdapter(encoder)
             else:
                 tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
             model = BertForMaskedLM.from_pretrained(model_path)

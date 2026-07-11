@@ -165,7 +165,7 @@ async def run_prediction_task(
         model_type = model_info["type"]
         tokenizer_path = model_info["tokenizer_path"]
         model_lang = model_info["lang"]
-        trust_remote_code = model_info.get("trust_remote_code", False)
+        subword_encoder_path = model_info.get("subword_encoder_path")
 
         text = request_data.text
         text_type = request_data.text_type  
@@ -177,7 +177,12 @@ async def run_prediction_task(
             )
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path, trust_remote_code=trust_remote_code)
+            model, tokenizer = model_loader.load_encoder(
+                model_name, 
+                model_type, 
+                tokenizer_path, 
+                model_lang=model_lang,
+                subword_encoder_path=subword_encoder_path)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
@@ -396,12 +401,18 @@ async def run_detection_task(
 
         model_name = model_info["model_path"]
         model_type = model_info["type"]
+        model_lang = model_info["lang"]
         tokenizer_path = model_info["tokenizer_path"]
-        trust_remote_code = model_info.get("trust_remote_code", False)
+        subword_encoder_path = model_info.get("subword_encoder_path")
         lev_distance = request_data.lev_distance
 
         try:
-            model, tokenizer = model_loader.load_encoder(model_name, model_type, tokenizer_path, trust_remote_code=trust_remote_code)
+            model, tokenizer = model_loader.load_encoder(
+                model_name, 
+                model_type, 
+                tokenizer_path, 
+                model_lang=model_lang,
+                subword_encoder_path=subword_encoder_path)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
