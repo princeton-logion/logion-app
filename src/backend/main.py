@@ -166,6 +166,7 @@ async def run_prediction_task(
         tokenizer_path = model_info["tokenizer_path"]
         model_lang = model_info["lang"]
         subword_encoder_path = model_info.get("subword_encoder_path")
+        trust_remote_code = model_info.get("trust_remote_code", False)
 
         text = request_data.text
         text_type = request_data.text_type  
@@ -182,7 +183,8 @@ async def run_prediction_task(
                 model_type, 
                 tokenizer_path, 
                 model_lang=model_lang,
-                subword_encoder_path=subword_encoder_path)
+                subword_encoder_path=subword_encoder_path,
+                trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")
@@ -404,6 +406,7 @@ async def run_detection_task(
         model_lang = model_info["lang"]
         tokenizer_path = model_info["tokenizer_path"]
         subword_encoder_path = model_info.get("subword_encoder_path")
+        trust_remote_code = model_info.get("trust_remote_code", False)
         lev_distance = request_data.lev_distance
 
         try:
@@ -412,7 +415,8 @@ async def run_detection_task(
                 model_type, 
                 tokenizer_path, 
                 model_lang=model_lang,
-                subword_encoder_path=subword_encoder_path)
+                subword_encoder_path=subword_encoder_path,
+                trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")

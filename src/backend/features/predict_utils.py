@@ -30,7 +30,7 @@ def _pseudo_prediction() -> List[Tuple[str, float]]:
 
 # convert list of sub-tokens into word
 def _display_word(toks, tokenizer):
-    is_latin_subword = isinstance(tokenizer, LatinTokenizerAdapter)
+    is_latin_subword = isinstance(tokenizer, LatinTokenizerAdapter) or getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
     s = ''
     for i, tok_id in enumerate(toks):
         # convert tkn ID to string

@@ -27,7 +27,15 @@ models:
     type: "canine"
     lang: "grc"
 
-  - name: "Latin BERT"
+  - name: "LatinBERT"
+    model_path: "../../models/latin_bert"
+    type: "bert"
+    tokenizer_path: "../../models/latin_bert"
+    subword_encoder_path: "../../models/subword_tokenizer_latin/latin.subword.encoder"
+    lang: "la"
+    trust_remote_code: false
+
+  - name: "LatinBERT HF"
     model_path: "latincy/latin-bert"
     type: "bert"
     tokenizer_path: "latincy/latin-bert"
