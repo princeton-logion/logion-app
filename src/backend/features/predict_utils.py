@@ -3,9 +3,8 @@ import numpy as np
 import asyncio
 import logging
 from typing import Callable, Coroutine, Any, Dict, List, Tuple
-from . import cancel, hex_filter
+from . import cancel, hex_filter, blacklist
 from itertools import product
-from models.latin_tokenizer import LatinTokenizerAdapter
 
 """
 Helper functions for gap-filling with beam search
@@ -30,7 +29,7 @@ def _pseudo_prediction() -> List[Tuple[str, float]]:
 
 # convert list of sub-tokens into word
 def _display_word(toks, tokenizer):
-    is_latin_subword = isinstance(tokenizer, LatinTokenizerAdapter) or getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
+    is_latin_subword = getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
     s = ''
     for i, tok_id in enumerate(toks):
         # convert tkn ID to string
@@ -213,8 +212,12 @@ async def generate_multi_token_suggestions(
             cancellation_event=cancellation_event,
         )
 
+        is_latin_subword = getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
+        if is_latin_subword and getattr(tokenizer, "blacklist_ids", None) is None:
+            tokenizer.blacklist_ids = blacklist.get_latin_blacklist_ids(tokenizer)
+
         for suggestion_ids, probability in sugs:
-            if isinstance(tokenizer, LatinTokenizerAdapter) and all(
+            if getattr(tokenizer, "blacklist_ids", None) and any(
                 tid in tokenizer.blacklist_ids for tid in suggestion_ids
             ):
                 continue

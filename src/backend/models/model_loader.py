@@ -172,7 +172,6 @@ def load_encoder(model_path: str,
                  model_type: str, 
                  tokenizer_path: str, 
                  model_lang: str, 
-                 subword_encoder_path: str,
                  trust_remote_code: bool):
     """
     Load encoder model using HF transformers library
@@ -194,10 +193,6 @@ def load_encoder(model_path: str,
                 if trust_remote_code:
                     tokenizer=AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=trust_remote_code)
                     model = AutoModelForMaskedLM.from_pretrained(tokenizer_path)
-                else:
-                    encoder = SubwordTextEncoder(subword_encoder_path)
-                    tokenizer = LatinTokenizerAdapter(encoder)
-                    model = BertForMaskedLM.from_pretrained(model_path)
             else:
                 tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
                 model = BertForMaskedLM.from_pretrained(model_path)

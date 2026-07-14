@@ -4,6 +4,8 @@ import { handleWordColor } from '../utils/detectResultsUtils';
 import PredictionPopover from './popOvers/PredictionPopover';
 import CCRPopover from './popOvers/CCRPopover';
 
+const isPunctuation = (word) => /^[.,;:·!?()«»""]+$/.test(word);
+
 const DetectionResultsDisplay = ({
     taskStatus,
     predictions,
@@ -71,7 +73,7 @@ const DetectionResultsDisplay = ({
                 }}
                 onClick={() => handleWordClick(wordData)}
             >
-                {original_word + " "}
+                {(index === 0 || isPunctuation(original_word) ? '' : ' ') + original_word}
             </span>
         );
     });
@@ -80,6 +82,7 @@ const DetectionResultsDisplay = ({
         const { original_word, suggestions } = wordPrediction;
         const isSelected = activePopoverWord?.originalIndex === index;
         const replacement = isSelected && suggestions.length > 0 ? suggestions[0].token : null;
+        const display_word = replacement || original_word;
         const style = replacement ? {
             color: '#AA4499',
             fontWeight: 'bold',
@@ -91,7 +94,7 @@ const DetectionResultsDisplay = ({
                 key={`black-${original_word}-${index}`}
                 style={style}
             >
-                {(replacement || original_word) + " "}
+                {(index === 0 || isPunctuation(display_word) ? '' : ' ') + display_word}
             </span>
         );
     });

@@ -165,7 +165,6 @@ async def run_prediction_task(
         model_type = model_info["type"]
         tokenizer_path = model_info["tokenizer_path"]
         model_lang = model_info["lang"]
-        subword_encoder_path = model_info.get("subword_encoder_path")
         trust_remote_code = model_info.get("trust_remote_code", False)
 
         text = request_data.text
@@ -183,7 +182,6 @@ async def run_prediction_task(
                 model_type, 
                 tokenizer_path, 
                 model_lang=model_lang,
-                subword_encoder_path=subword_encoder_path,
                 trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
@@ -405,7 +403,6 @@ async def run_detection_task(
         model_type = model_info["type"]
         model_lang = model_info["lang"]
         tokenizer_path = model_info["tokenizer_path"]
-        subword_encoder_path = model_info.get("subword_encoder_path")
         trust_remote_code = model_info.get("trust_remote_code", False)
         lev_distance = request_data.lev_distance
 
@@ -415,7 +412,6 @@ async def run_detection_task(
                 model_type, 
                 tokenizer_path, 
                 model_lang=model_lang,
-                subword_encoder_path=subword_encoder_path,
                 trust_remote_code=trust_remote_code)
             device, model = model_loader.load_device(model)
         except Exception as e:
