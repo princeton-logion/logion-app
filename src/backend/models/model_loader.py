@@ -6,8 +6,6 @@ from transformers import (
     ElectraTokenizer,
     ElectraForMaskedLM,
 )
-from .latin_tokenizer import LatinTokenizerAdapter
-from .subword_text_encoder import SubwordTextEncoder
 import torch
 import logging
 import platform
