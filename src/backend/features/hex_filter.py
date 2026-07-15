@@ -41,44 +41,33 @@ USE_MACRONIZER = False
 
 
 def set_macronizer_enabled(enabled: bool) -> None:
-    """
-    Toggle grc_macronizer for module
-    """
     global USE_MACRONIZER
     USE_MACRONIZER = bool(enabled)
 
 
 """
-Premodern Greek phonological constants
+phonological constants
 """
-# vowels
 LONG_VOWELS: frozenset = frozenset("ηω")
 SHORT_VOWELS: frozenset = frozenset("εο")
 AMBIGUOUS_VOWELS: frozenset = frozenset("αιυ")
 ALL_VOWELS: frozenset = LONG_VOWELS | SHORT_VOWELS | AMBIGUOUS_VOWELS
 
-# diphthongs
 DIPHTHONG_LIST: Tuple[str, ...] = (
     "αι", "αυ", "ει", "ευ", "οι", "ου", "ηυ", "υι",
 )
 DIPHTHONG_SET: frozenset = frozenset(DIPHTHONG_LIST)
 
-# consonants (+ digamma)
 CONSONANTS: frozenset = frozenset("βγδζθκλμνξπρσςτφχψ\u03DD")
 
-# plosives
 PLOSIVES: frozenset = frozenset("πβφτδθκγχ")
 
-# liquids + nasals
 LIQUIDS_NASALS: frozenset = frozenset("λρμν")
 
-# sonorants (λ, μ, ν, ρ, σ)
 DRAWN_OUT_SONORANTS: frozenset = LIQUIDS_NASALS | frozenset("σ")
 
-# dbl consonants
 DOUBLE_CONSONANTS: frozenset = frozenset("ζξψ")
 
-# select frequent digamma (ϝ) wrds
 DIGAMMA_WORDS: frozenset = frozenset({
     # ϝός/ἑός
     "ον", "ην", "ων", "οσ", "οισι", "οισ",
@@ -99,74 +88,43 @@ DIGAMMA_WORDS: frozenset = frozenset({
     "οιδα", "οιδε", "ισμεν", "ιδμεν",
 })
 
-# scansion markers
-L = "L"   # long
-S = "S"   # short
-X = "X"   # flexible
+# scansion marks: L=long, S=short, X=flexible
+L = "L"
+S = "S"
+X = "X"
 
 
-#  Unicode Helpers
-
+"""
+Unicode helpers
+"""
 def _base_char(char: str) -> str:
-    """
-    Lowercase + de-accent Grc character
-    """
     nfd = unicodedata.normalize("NFD", char)
     return nfd[0].lower() if nfd else char.lower()
 
-
 def _has_iota_subscript(char: str) -> bool:
-    """
-    Check if character has iota subscript (U+0345)
-    Makes vowel long
-    """
     return "\u0345" in unicodedata.normalize("NFD", char)
 
-
 def _has_macron(char: str) -> bool:
-    """
-    Check if character has combining macron (U+0304)
-    Makes flexible vowel long
-    For grc_macronizer
-    """
     return "\u0304" in unicodedata.normalize("NFD", char)
 
-
 def _has_breve(char: str) -> bool:
-    """
-    Check if character has combining breve (U+0306)
-    Makes flexible vowel short
-    For grc_macronizer
-    """
     return "\u0306" in unicodedata.normalize("NFD", char)
 
-
 def _has_circumflex(char: str) -> bool:
-    """
-    Check if character has circumflex (U+0342)
-    """
     return "\u0342" in unicodedata.normalize("NFD", char)
 
-
 def _has_diaeresis(char: str) -> bool:
-    """
-    Check if character has diaeresis (U+0308)
-    Makes two adjacent vowels separate
-    """
     return "\u0308" in unicodedata.normalize("NFD", char)
 
 
 """
 grc_macronizer helpers
 
--currently obsolete, keep for testing grc_macronizer integration
--currently bypass grc_macronizer for initial test and higher recall
+    -currently obsolete, keep for testing grc_macronizer integration
+    -currently bypass grc_macronizer for initial test and higher recall
 """
 
 def _patch_odycy_loader_to_memoize():
-    """
-    Aims to load odyCy once for grc_macronizer
-    """
     global _odycy_load_patched
     if _odycy_load_patched:
         return
@@ -191,11 +149,6 @@ def _patch_odycy_loader_to_memoize():
 
 
 def _get_macronizer():
-    """
-    Instantiate grc_macronizer on first run
-
-    Returns None if grc_macronizer not installed
-    """
     global _macronizer
     if _macronizer is None and HAS_MACRONIZER:
         try:
@@ -210,9 +163,6 @@ def _get_macronizer():
 
 @lru_cache(maxsize=4096)
 def _macronize_cached(text: str) -> Optional[str]:
-    """
-    Macronize one verse line
-    """
     macronizer = _get_macronizer()
     if macronizer is None:
         return None
@@ -226,15 +176,6 @@ def _macronize_cached(text: str) -> Optional[str]:
 
 
 def macronize(text: str) -> Optional[str]:
-    """
-    macronize text w/ grc_macronizer if enabled
-
-    Parameters:
-        text (str) -- grc text
-
-    Returns:
-        str or None
-    """
     if not (HAS_MACRONIZER and USE_MACRONIZER):
         return None
     return _macronize_cached(text)
@@ -509,10 +450,9 @@ def syllabify_line(line: str) -> List[SyllableInfo]:
 """
 Vowel length assignment
 """
-
 def _intrinsic_vowel_quantity(nuc: _PhonUnit) -> str:
     """
-    Mark length of vowel
+    Mark vowel length
 
     Rules:
         - η, ω == L
