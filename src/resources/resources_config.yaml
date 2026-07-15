@@ -3,26 +3,38 @@ models:
     model_path: "princeton-logion/logion-bert-base"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
+    lang: "grc"
 
   - name: "Plato BERT"
     model_path: "princeton-logion/logion-bert-plato"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
+    lang: "grc"
 
   - name: "ATE BERT"
     model_path: "princeton-logion/logion-bert-ate"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
+    lang: "grc"
 
   - name: "Tiresias V1 (Char)"
     model_path: "princeton-logion/char-model-linear-40"
     type: "canine"
+    lang: "grc"
 
   - name: "Tiresias V2 (Char)"
     model_path: "princeton-logion/char-model-linear-30"
     type: "canine"
+    lang: "grc"
+
+  - name: "LatinBERT"
+    model_path: "latincy/latin-bert"
+    type: "bert"
+    tokenizer_path: "latincy/latin-bert"
+    lang: "la"
+    trust_remote_code: true
 
 lev_filter:
-   lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
-   lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"
-   lev3: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/3.npy"
+  lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
+  lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"
+  lev3: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/3.npy"

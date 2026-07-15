@@ -15,18 +15,26 @@ function genUID() {
     return `${protocol}//${host}${path}`;
 }; */
 const getWebSocketURL = () => {
-    const host = window.location.host;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // get base path from browser url; OOD: "/node/della-[host]/[port]/", local: "/"
+
+    // Local dev: frontend runs on 8001, backend runs on 8000
+    const isLocal =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+
+    if (isLocal) {
+        return `${protocol}//127.0.0.1:8000/ws/`;
+    }
+
+    // OOD / deployed environment: preserve current behavior
+    const host = window.location.host;
     let basePath = window.location.pathname;
-    // if base path doesn't end in "/", add "/"
+
     if (!basePath.endsWith('/')) {
         basePath += '/';
     }
-    // append ws endpoint to base path
-    const path = `${basePath}ws/`; 
 
-    return `${protocol}//${host}${path}`;
+    return `${protocol}//${host}${basePath}ws/`;
 };
 
 // establish WS context

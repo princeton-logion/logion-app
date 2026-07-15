@@ -3,7 +3,7 @@ import numpy as np
 import asyncio
 import logging
 from typing import Callable, Coroutine, Any, Dict, List, Tuple
-from . import cancel, hex_filter
+from . import cancel, hex_filter, blacklist
 from itertools import product
 
 """
@@ -29,22 +29,29 @@ def _pseudo_prediction() -> List[Tuple[str, float]]:
 
 # convert list of sub-tokens into word
 def _display_word(toks, tokenizer):
+    is_latin_subword = getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
     s = ''
-    first_tok = True
-    for tok_id in toks:
+    for i, tok_id in enumerate(toks):
         # convert tkn ID to string
         tok = tokenizer.convert_ids_to_tokens([tok_id])[0]
         if not isinstance(tok, str): tok = str(tok)
 
+        if is_latin_subword:
+            ends_word = tok.endswith('_')
+            if ends_word:
+                # rmv '_'
+                tok = tok[:-1]
+            s += tok 
+            if ends_word and i != len(toks) - 1:
+                s += ' '
+
         # reconstruct words per '##' prefix
-        is_suffix = tok.startswith('##')
-        if is_suffix:
-            # rmv '##'
-            tok = tok[2:]
-        elif not first_tok:
-            s += ' '
-        s += tok
-        first_tok = False
+        else: 
+            is_suffix = tok.startswith('##')
+            if is_suffix:
+                # rmv '##'
+                tok = tok[2:]
+            s += tok
     return s
 
 
@@ -205,7 +212,15 @@ async def generate_multi_token_suggestions(
             cancellation_event=cancellation_event,
         )
 
+        is_latin_subword = getattr(tokenizer, "name_or_path", "") == "latincy/latin-bert"
+        if is_latin_subword and getattr(tokenizer, "blacklist_ids", None) is None:
+            tokenizer.blacklist_ids = blacklist.get_latin_blacklist_ids(tokenizer)
+
         for suggestion_ids, probability in sugs:
+            if getattr(tokenizer, "blacklist_ids", None) and any(
+                tid in tokenizer.blacklist_ids for tid in suggestion_ids
+            ):
+                continue
             candidate_word = _display_word(suggestion_ids, tokenizer)
             overall_sugs.append((candidate_word, probability))
 

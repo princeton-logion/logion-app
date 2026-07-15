@@ -103,7 +103,7 @@ async def prediction_function(
         # "." = end of chunk
         while (
             chunk_end > chunk_start
-            and tokenizer.convert_ids_to_tokens([chunk_tokens[-1]])[0] != "."
+            and tokenizer.convert_ids_to_tokens([chunk_tokens[-1]])[0].rstrip("_") != "."
         ):
             chunk_end -= 1
             chunk_tokens = tokens_full[chunk_start:chunk_end]

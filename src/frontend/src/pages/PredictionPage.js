@@ -38,7 +38,7 @@ function WordPredictionPage() {
           .then((data) => {
               setModelOptions(data);
               if (data && data.length > 0 && !selectedModel) {
-                    setSelectedModel(data[0]);
+                    setSelectedModel(data[0].name);
                 }
           })
           .catch((error) => console.error("Unable to fetch models.", error));
@@ -78,7 +78,27 @@ function WordPredictionPage() {
         };
     }, [addMessageHandler, removeMessageHandler, handleWsMsg]);
 
+    const selectedModelObj = modelOptions.find(
+    (model) => model.name === selectedModel
+    );
+
+    const isLatinHexameter = selectedModelObj?.lang === "la" && selectedTextType === "hexameter";
+
+    useEffect(() => {
+        if (selectedModelObj?.lang === "la" && selectedTextType === "hexameter") {
+            setSelectedTextType("prose");
+        }
+    }, [selectedModelObj, selectedTextType]);
+
     const taskSubmit = (event) => {
+        if (isLatinHexameter) {
+            event.preventDefault();
+            setCurrentTask({
+                status: "error",
+                error: "Latin models cannot be used with hexameter text type."
+            });
+            return;
+        }
         const predictionOptions = {
             taskType: "word_prediction",
             requestData: { model_name: selectedModel, text: inputText, text_type: selectedTextType },
@@ -179,13 +199,13 @@ function WordPredictionPage() {
                     <div className="d-flex mb-4">
                         <div><p className='inline-label'>Select model: </p>
                             <select className="form-select model-select" value={selectedModel} onChange={handleModelChange}>
-                                {modelOptions.map((model, index) => (<option key={index} value={model}>{model}</option>))}
+                                {modelOptions.map((model, index) => (<option key={index} value={model.name}>{model.name}</option>))}
                             </select>
                         </div>
                         <div className="ms-4"><p className='inline-label'>Select text type: </p>
                             <select className="form-select model-select" value={selectedTextType} onChange={handleTextTypeChange}>
                                 <option value="prose">Prose</option>
-                                <option value="hexameter">Hexameter</option>
+                                <option value="hexameter" disabled={selectedModelObj?.lang === "la"}>Hexameter</option>
                             </select>
                         </div>
                     </div>

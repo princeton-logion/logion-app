@@ -197,7 +197,7 @@ function DetectionPage() {
                     <div className="d-flex mb-4 col-md-7">
                         <div><p className='inline-label'>Select model: </p>
                             <select className="form-select model-select" value={selectedModel} onChange={handleModelChange} disabled={!modelOptions.length}>
-                                {modelOptions.map((model, index) => (<option key={index} value={model}>{model}</option>))}
+                                {modelOptions.map((model, index) => (<option key={index} value={model.name}>{model.name}</option>))}
                             </select>
                         </div>
                         <div className='ms-3'><p className='inline-label'>Levenshtein distance: <LevDistPopover>

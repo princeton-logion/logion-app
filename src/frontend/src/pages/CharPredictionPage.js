@@ -174,7 +174,7 @@ function CharPredictionPage() {
                     <div className="d-flex mb-4">
                         <div><p className='inline-label'>Select model: </p>
                             <select className="form-select model-select" value={selectedModel} onChange={handleModelChange}>
-                                {modelOptions.map((model, index) => (<option key={index} value={model}>{model}</option>))}
+                                {modelOptions.map((model, index) => (<option key={index} value={model.name}>{model.name}</option>))}
                             </select>
                         </div>
                     </div>

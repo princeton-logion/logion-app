@@ -74,7 +74,7 @@ async def detection_function(
     while chunk_start < num_tokens_full:
         await cancel.check_cancel_status(cancellation_event, task_id)
 
-        progess_percent = 15.0 + (chunk_start / num_tokens_full) * 85.0
+        progess_percent = 15.0 + (chunk_start / num_tokens_full) * 80.0
         # chunks processed / total (approx)
         total_chunks = (num_tokens_full + chunk_size - 1) // chunk_size # approx
         current_chunk_num = (chunk_start // chunk_size) + 1
@@ -86,7 +86,7 @@ async def detection_function(
         # "." = end of chunk
         while (
             chunk_end > chunk_start
-            and tokenizer.convert_ids_to_tokens(chunk_tokens[-1]) != "."
+            and tokenizer.convert_ids_to_tokens(chunk_tokens[-1]).strip("_") != "."
         ):
             chunk_end -= 1
             chunk_tokens = tokens_full[chunk_start:chunk_end]
@@ -101,8 +101,10 @@ async def detection_function(
             .to(device)
         )
 
+        chunk_end_pct = 15.0 + (chunk_end / num_tokens_full) * 80.0
+
         pre_chance_progress = progess_percent
-        progress_range_chance = 20.0
+        progress_range_chance = 0.3 * (chunk_end_pct - pre_chance_progress)
         await progress_callback(pre_chance_progress, "Calculating chance scores...")
 
         # compute chance score for each token
@@ -115,7 +117,7 @@ async def detection_function(
             progress_range=progress_range_chance
         )
 
-        post_chance_progress = min(pre_chance_progress + progress_range_chance, 50.0)
+        post_chance_progress = pre_chance_progress + progress_range_chance
         await progress_callback(post_chance_progress, "Processing words for suggestions...")
 
         tkn_chance_scores = tkn_chance_scores[1:-1]
@@ -127,7 +129,7 @@ async def detection_function(
         # compute word-level chance scores
         word_chance_scores: list = []
         for i in range(len(tokens_decode)):
-            if tokens_decode[i].startswith("##"):
+            if tokens_decode[i].startswith("##") or (i > 0 and not tokens_decode[i - 1].endswith("_")):
                 if tkn_chance_scores[i] < word_chance_scores[-1]:
                     word_chance_scores[-1] = tkn_chance_scores[i]
             else:
@@ -135,7 +137,7 @@ async def detection_function(
 
         words: List[List[int]] = []
         for i in range(len(tokens_decode)):
-            if not tokens_decode[i].startswith("##"):
+            if not (tokens_decode[i].startswith("##") or (i > 0 and not tokens_decode[i - 1].endswith("_"))):
                 words.append([token_ids[0, 1:-1][i].item()])
             else:
                 words[-1] = words[-1] + [token_ids[0, 1:-1][i].item()]
@@ -147,7 +149,7 @@ async def detection_function(
         words_in_chunk = len(words)
 
         pre_confidence_progress = post_chance_progress
-        progress_range_confidence = 95.0 - pre_confidence_progress
+        progress_range_confidence = chunk_end_pct - pre_confidence_progress
 
         # generate suggestions with confidence scores
         for word_ind, word_score in enumerate(word_chance_scores):

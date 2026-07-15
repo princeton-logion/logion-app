@@ -25,9 +25,16 @@ class Logion:
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
-        self.blacklist = blacklist.blacklist
-        self.blacklist_ids = set(self.blacklist.keys())
-        self.blacklist_chars = set(self.blacklist.values())
+        is_latin_subword = getattr(Tokenizer, "name_or_path", "") == "latincy/latin-bert"
+        if is_latin_subword:
+            self.blacklist_ids = blacklist.get_latin_blacklist_ids(Tokenizer)
+            self.blacklist_chars = {
+                Tokenizer.convert_ids_to_tokens([tid])[0].rstrip("_") for tid in self.blacklist_ids
+            }
+        else:
+            self.blacklist = blacklist.greek_blacklist
+            self.blacklist_ids = set(self.blacklist.keys())
+            self.blacklist_chars = set(self.blacklist.values())
 
     
     def _get_chance_probability(
@@ -116,9 +123,21 @@ class Logion:
 
     
     def display_sentence(self, toks):
-        s = ""
-        first_tok = True
+        is_latin_subword = getattr(self.Tokenizer, "name_or_path", "") == "latincy/latin-bert"
 
+        if is_latin_subword:
+            s = ''
+            for i, tok in enumerate(toks):
+                ends_word = tok.endswith("_")
+                if ends_word:
+                    tok = tok[:-1]
+                s += tok
+                if ends_word and i != len(toks) - 1:
+                    s += ' '
+            return s
+
+        s = ''
+        first_tok = True
         for tok in toks:
             if tok.startswith("##"):
                 tok = tok[2:]
@@ -128,11 +147,8 @@ class Logion:
                 first_tok = False
             else:
                 tok = " " + tok
-
             s += tok
         return s
-    
-
     
     def _argkmax_beam(self, array, k, prefix="", dim=1):
         array_cpu = array.cpu()
@@ -321,8 +337,7 @@ class Logion:
     
             # filter search results via lev dist
             for suggestion_ids, probability, _ in sugs:
-                converted_tokens = self.Tokenizer.convert_ids_to_tokens(suggestion_ids)
-                candidate_word = self._display_word(converted_tokens)
+                candidate_word = self._display_word(suggestion_ids)
 
                 # calculate lev dist w/out matrix for candidate words
                 dist = levenshtein(candidate_word, transmitted_text, max_lev)
@@ -340,15 +355,29 @@ class Logion:
     
 
     
+    # convert list of sub-tokens into word
     def _display_word(self, toks):
+        is_latin_subword = getattr(self.Tokenizer, "name_or_path", "") == "latincy/latin-bert"
         s = ''
-        first_tok = True
-        for tok in toks:
+        for i, tok_id in enumerate(toks):
+            # convert tkn ID to string
+            tok = self.Tokenizer.convert_ids_to_tokens([tok_id])[0]
             if not isinstance(tok, str): tok = str(tok)
-            is_suffix = tok.startswith('##')
-            if is_suffix: tok = "" + tok[2:]
-            elif not first_tok:
-                pass
-            s += tok
-            first_tok = False
-        return s 
+
+            if is_latin_subword:
+                ends_word = tok.endswith('_')
+                if ends_word:
+                    # rmv '_'
+                    tok = tok[:-1]
+                s += tok 
+                if ends_word and i != len(toks) - 1:
+                    s += ' '
+
+            # reconstruct words per '##' prefix
+            else: 
+                is_suffix = tok.startswith('##')
+                if is_suffix:
+                    # rmv '##'
+                    tok = tok[2:]
+                s += tok
+        return s

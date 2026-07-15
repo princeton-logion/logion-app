@@ -30,3 +30,6 @@ dist/
 
 # npm
 node_modules/
+
+# LatinBERT
+/models/
