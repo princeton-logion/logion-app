@@ -69,7 +69,8 @@ From: pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
     echo "GPU available: $(/opt/logion/bin/python -c 'import torch; print(torch.cuda.is_available())')"
     echo "Static served from ${STATIC_DIR}"
     
-    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" "$@"
+    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" \
+        --timeout-graceful-shutdown 5 "$@"
 
 %startscript
     # `apptainer instance start`
@@ -81,4 +82,5 @@ From: pytorch/pytorch:2.2.1-cuda12.1-cudnn8-runtime
     echo "GPU available: $(/opt/logion/bin/python -c 'import torch; print(torch.cuda.is_available())')"
     echo "Static served from ${STATIC_DIR}"
     
-    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" "$@"
+    exec /opt/logion/bin/uvicorn main:app --host "$HOST" --port "$PORT" \
+        --timeout-graceful-shutdown 5 "$@"

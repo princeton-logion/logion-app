@@ -8,25 +8,12 @@ function genUID() {
 }
 
 // backend Websocket relative path
-/* const getWebSocketURL = () => {
-    const host = window.location.host;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const path = '/ws/';
-    return `${protocol}//${host}${path}`;
-}; */
 const getWebSocketURL = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-    // Local dev: frontend runs on 8001, backend runs on 8000
-    const isLocal =
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1';
-
-    if (isLocal) {
-        return `${protocol}//127.0.0.1:8000/ws/`;
+    if (process.env.NODE_ENV === 'development') {
+        const devPort = process.env.REACT_APP_BACKEND_PORT || '8000';
+        return `${protocol}//127.0.0.1:${devPort}/ws/`;
     }
-
-    // OOD / deployed environment: preserve current behavior
     const host = window.location.host;
     let basePath = window.location.pathname;
 

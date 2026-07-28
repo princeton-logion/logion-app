@@ -53,7 +53,7 @@ async def detection_function(
     if text == "":
         logging.info(f"Task {task_id}: Input text cannot be empty.")
         await progress_callback(100.0, "Input text cannot be empty.")
-        return []
+        return {}, []
 
     final_predictions = {}
     ccr = []
@@ -126,10 +126,22 @@ async def detection_function(
         #logging.info(f"Task {task_id}: Tokens: {tokens_decode}")
         logging.info(f"Task {task_id}: Number of tokens: {len(tokens_decode)}")
 
+        def check_subword(i: int) -> bool:
+            """
+            Check if token is subword continuing previous subword
+            GreekBERT: uses ## at start of current tkn
+            LatinBERT: uses _ at end of prev tkn
+            """
+            if i == 0:
+                return False
+            if model.is_latin_subword:
+                return not tokens_decode[i - 1].endswith("_")
+            return tokens_decode[i].startswith("##")
+
         # compute word-level chance scores
         word_chance_scores: list = []
         for i in range(len(tokens_decode)):
-            if tokens_decode[i].startswith("##") or (i > 0 and not tokens_decode[i - 1].endswith("_")):
+            if check_subword(i):
                 if tkn_chance_scores[i] < word_chance_scores[-1]:
                     word_chance_scores[-1] = tkn_chance_scores[i]
             else:
@@ -137,10 +149,10 @@ async def detection_function(
 
         words: List[List[int]] = []
         for i in range(len(tokens_decode)):
-            if not (tokens_decode[i].startswith("##") or (i > 0 and not tokens_decode[i - 1].endswith("_"))):
-                words.append([token_ids[0, 1:-1][i].item()])
-            else:
+            if check_subword(i):
                 words[-1] = words[-1] + [token_ids[0, 1:-1][i].item()]
+            else:
+                words.append([token_ids[0, 1:-1][i].item()])
 
         #logging.info(f"Task {task_id}: Word scores: {word_chance_scores}\nWords: {words}")
         logging.info(f"Task {task_id}: Words in chunk: {len(words)}\nWord scores in chunk: {len(word_chance_scores)}")

@@ -42,7 +42,8 @@ function DetectionPage() {
           .then((data) => {
               setModelOptions(data);
               if (data && data.length > 0 && !selectedModel) {
-                    setSelectedModel(data[0]);
+                    // default if none selected 
+                    setSelectedModel((prev) => prev || data[0].name);
                 }
           })
           .catch((error) => console.error("Unable to fetch models.", error));
@@ -146,7 +147,7 @@ function DetectionPage() {
 
 
     const isInputValid = inputText.trim() !== '';
-    const detectButtonDisabled = !isInputValid || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing' || currentTask.status === 'cancelling'));
+    const detectButtonDisabled = !isInputValid || !selectedModel || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing' || currentTask.status === 'cancelling'));
     const cancelButtonEnabled = currentTask && isConnected && (currentTask.status === 'pending' || currentTask.status === 'processing' || currentTask.status === 'cancelling');
 
     const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${currentTask?.status === 'error' ? 'is-invalid' : ''}`;

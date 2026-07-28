@@ -1,17 +1,18 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
 const log = require('electron-log');
 const fs = require('fs');
 const dotenv = require('dotenv');
+const readline = require('node:readline');
 
 // set log file
 log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'logion-app.log');
 const logFilePath = log.transports.file.getFile().path;
 
 function getEnvVars() {
-    // find app.env file and load
+    // find app.env file + load
     const envPath = app.isPackaged 
         ? path.join(process.resourcesPath, 'app.env') 
         : path.join(__dirname, 'app.env');
@@ -26,7 +27,6 @@ function getEnvVars() {
         log.info('app.env file not found, using system env only');
     }
 
-    // pass URL as is
     if (vars.LOGION_RESOURCES_CONFIG) {
         log.info(`Remote Config Source: ${vars.LOGION_RESOURCES_CONFIG}`);
     }
@@ -34,13 +34,24 @@ function getEnvVars() {
     return vars;
 }
 const appEnv = getEnvVars();
-const HOST = appEnv.LOGION_HOST || '127.0.0.1'; // default if missing
-const PORT = appEnv.LOGION_PORT || '8000';      // default if missing
-const BASE_URL = `http://${HOST}:${PORT}`;
+const HOST = appEnv.LOGION_HOST || '127.0.0.1';
+let baseUrl = null;
 
 let backendProcess;
 let loadingWindow;
 let mainWindow;
+
+// avoid multiple Logion instances
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+} else {
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
 
 function createLoadingWindow() {
     loadingWindow = new BrowserWindow({
@@ -77,7 +88,7 @@ function createMainWindow() {
         },
     });
 
-    const startupURL = BASE_URL;
+    const startupURL = baseUrl;
 
     log.info(`[createMainWindow] Loading URL: ${startupURL}`);
         mainWindow.loadURL(startupURL);
@@ -87,10 +98,6 @@ function createMainWindow() {
     });
 
     mainWindow.on('closed', () => {
-        if (backendProcess) {
-            backendProcess.kill();
-            log.info('Quit backend API');
-        }
         mainWindow = null;
     });
 }
@@ -133,11 +140,14 @@ function startBackend() {
     try {
         backendProcess = spawn(backendPath, [], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            env: { ...appEnv, STATIC_DIR: staticDir },
+            // kill(-pid) reaches descendants with own process group on linx/mac
+            detached: process.platform !== 'win32',
+            env: { ...appEnv, STATIC_DIR: staticDir, LOGION_LAUNCHER: 'electron', PYTHONUNBUFFERED: '1' },
         });
         log.info('Backend API started.');
     } catch (err) {
         log.error(`Unable to spawn API server: ${err.message}`);
+        return Promise.reject(err);
     }
 
     backendProcess.on('spawn', () => {
@@ -148,29 +158,70 @@ function startBackend() {
         log.error(`Unable to spawn API server: ${err}`);
     });
 
-    backendProcess.stdout.on('data', (data) => {
-        log.info(`API STDOUT: ${data}`);
-    });
-
     backendProcess.stderr.on('data', (data) => {
-        log.error(`API STDERR: ${data}`);
+        log.info(`API: ${data}`);
     });
 
     backendProcess.on('close', (code) => {
         log.info(`Quit API with code ${code}`);
     });
+
+    // wait for backend port report
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(
+            () => reject(new Error('No reported port from API')),
+            120000
+        );
+
+        readline.createInterface({ input: backendProcess.stdout })
+            .on('line', (line) => {
+                log.info(`API STDOUT: ${line}`);
+                const m = /^__LOGION_PORT__=(\d+)$/.exec(line);
+                if (m) {
+                    clearTimeout(timer);
+                    resolve(Number(m[1]));
+                }
+            });
+
+        backendProcess.on('exit', (code) => {
+            clearTimeout(timer);
+            reject(new Error(`API exit during startup: ${code}`));
+        });
+    });
+}
+
+
+// terminate backend + all processes
+function stopBackend() {
+    if (!backendProcess) return;
+    const proc = backendProcess;
+    backendProcess = null;
+
+    log.info(`Terminating backend (pid ${proc.pid})...`);
+    try {
+        if (process.platform === 'win32') {
+            spawn('taskkill', ['/pid', String(proc.pid), '/T', '/F']);
+        } else {
+            process.kill(-proc.pid, 'SIGTERM');
+            setTimeout(() => {
+                try { process.kill(-proc.pid, 'SIGKILL'); } catch {}
+            }, 5000);
+        }
+    } catch (err) {
+        log.error(`Unable to terminate backend: ${err.message}`);
+    }
 }
 
 
 // check health endpoint for API server
 async function wait4ServerReady() {
-    const healthEndpoint = `${BASE_URL}/health`;
+    const healthEndpoint = `${baseUrl}/health`;
     const retryInterval = 500; // 500 ms
     const maxRetries = 240; // wait up 2 mins (for slow Win 1st open)
 
     for (let i = 0; i < maxRetries; i++) {
         try {
-            const response = await axios.get(healthEndpoint);
+            const response = await axios.get(healthEndpoint, { timeout: 2000 });
             if (response.status === 200) {
                 log.info('Server ready.');
                 return true;
@@ -186,33 +237,39 @@ async function wait4ServerReady() {
 
 app.whenReady().then(async () => {
     createLoadingWindow();
-    startBackend();
+
+    let port;
+    try {
+        port = await startBackend();
+    } catch (err) {
+        log.error(`Backend startup failed: ${err.message}`);
+        dialog.showErrorBox('Logion unable to start', err.message);
+        stopBackend();
+        app.quit();
+        return;
+    }
+
+    baseUrl = `http://${HOST}:${port}`;
+    log.info(`Backend port ${port}, base URL ${baseUrl}`);
 
     const isBackendReady = await wait4ServerReady();
 
     if (isBackendReady) {
-        loadingWindow.close();
+        if (loadingWindow) loadingWindow.close();
         createMainWindow();
     } else {
         log.error('Unable to start API server. Quit app.');
-        if (backendProcess) {
-            log.info('Terminating backend...');
-            backendProcess.kill(); 
-            backendProcess = null;
-        }
+        dialog.showErrorBox('Unable to start Logion. Server failed to start.');
+        stopBackend();
         app.quit();
     }
 });
 
 
 // kill server when app quits
-app.on('before-quit', () => {
-    if (backendProcess) {
-        log.info('Terminating backend before close...');
-        backendProcess.kill();
-        backendProcess = null;
-    }
-});
+app.on('before-quit', stopBackend);
+app.on('will-quit', stopBackend);
+process.on('exit', stopBackend);
 
 // quit app
 app.on('window-all-closed', () => {

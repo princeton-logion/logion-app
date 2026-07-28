@@ -16,6 +16,10 @@ import regex as re
 import asyncio
 from typing import Dict, Any, Callable, Coroutine
 import pydantic
+import socket
+import threading
+import time
+from contextlib import asynccontextmanager
 
 
 # comprehensive seed to ensure reproducibility
@@ -32,10 +36,21 @@ torch.backends.cudnn.benchmark = False
 logging.basicConfig(
     level="INFO",
     format="%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(message)s",
-    stream=sys.stdout
+    stream=sys.stderr,
+    force=True,
 )
+# ensure dependencyies out of log
+for _noisy in ("urllib3", "asyncio", "filelock", "huggingface_hub", "transformers"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
-app = FastAPI(title="Logion")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await load_app_config()
+    yield
+
+
+app = FastAPI(title="Logion", lifespan=lifespan)
 
 # CORS middleware
 app.add_middleware(
@@ -68,7 +83,6 @@ LEV_CONFIG_ENTRY = {}
 
 
 
-@app.on_event("startup")
 async def load_app_config():
     """
     Load resources_config.yaml on app startup.
@@ -229,7 +243,7 @@ async def run_prediction_task(
         await progress_callback(100.0, "Word prediction complete.")
 
         # Return both predictions and cleaned_text
-        response_dict = final_response.dict()
+        response_dict = final_response.model_dump()
         response_dict['origText'] = orig_txt
         logging.info(f"Response: {response_dict}")
         
@@ -347,7 +361,7 @@ async def run_char_prediction_task(
         await progress_callback(100.0, "Character prediction complete.")
 
         # Return both predictions and cleaned_text
-        response_dict = final_response.dict()
+        response_dict = final_response.model_dump()
         response_dict['origText'] = orig_txt
         logging.info(f"Response: {response_dict}")
         
@@ -492,7 +506,7 @@ async def run_detection_task(
         )
         await progress_callback(100.0, "Error detection complete")
 
-        return final_response.dict()
+        return final_response.model_dump()
 
     except asyncio.CancelledError:
         logging.info(f"Task {task_id}: User cancelled error detection task")
@@ -543,16 +557,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                                 task_id=task_id, 
                                 detail=f"Invalid request data: {str(e)}",
                                 status_code=422
-                            ).dict()
+                            ).model_dump()
                         )
                         continue
 
-                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Word prediction task received").dict())
+                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Word prediction task received").model_dump())
 
                     cancellation_event = asyncio.Event()
 
                     async def progress_callback(percentage: float, message: str):
-                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
+                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).model_dump())
 
                     task = asyncio.create_task(
                         run_prediction_task(request, task_id, progress_callback, cancellation_event)
@@ -584,16 +598,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                                 task_id=task_id, 
                                 detail=f"Invalid request data: {str(e)}",
                                 status_code=422
-                            ).dict()
+                            ).model_dump()
                         )
                         continue
 
-                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Character prediction task received").dict())
+                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Character prediction task received").model_dump())
 
                     cancellation_event = asyncio.Event()
 
                     async def progress_callback(percentage: float, message: str):
-                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
+                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).model_dump())
 
                     task = asyncio.create_task(
                         run_char_prediction_task(request, task_id, progress_callback, cancellation_event)
@@ -626,16 +640,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                                 task_id=task_id, 
                                 detail=f"Invalid request data: {str(e)}",
                                 status_code=422
-                            ).dict()
+                            ).model_dump()
                         )
                         continue
 
-                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Error detection task received").dict())
+                    await send_message(websocket, ws_schemas.ServerAckMsg(type="ack", task_id=task_id, message="Error detection task received").model_dump())
 
                     cancellation_event = asyncio.Event()
 
                     async def progress_callback(percentage: float, message: str):
-                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).dict())
+                        await send_message(websocket, ws_schemas.ServerProgressMsg(type="progress", task_id=task_id, percentage=percentage, message=message).model_dump())
 
                     task = asyncio.create_task(
                         run_detection_task(request, task_id, progress_callback, cancellation_event)
@@ -701,7 +715,7 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
     try:
         if task.cancelled():
             logging.info(f"Task {task_id}: Cancelled")
-            asyncio.create_task(send_message(websocket, ws_schemas.ServerCancelMsg(type="cancelled", task_id=task_id).dict()))
+            asyncio.create_task(send_message(websocket, ws_schemas.ServerCancelMsg(type="cancelled", task_id=task_id).model_dump()))
 
         elif task.exception():
             exc = task.exception()
@@ -720,7 +734,7 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
                         task_id=task_id, 
                         detail=error_detail, 
                         status_code=status_code
-                    ).dict()
+                    ).model_dump()
                 )
             )
 
@@ -729,14 +743,14 @@ def handle_task_completion(task: asyncio.Task, task_id: str, websocket: WebSocke
             # None = Cancelled
             if result is None:
                  logging.info(f"Task {task_id}: Cancelled")
-                 asyncio.create_task(send_message(websocket, ws_schemas.ServerCancelMsg(type="cancelled", task_id=task_id).dict()))
+                 asyncio.create_task(send_message(websocket, ws_schemas.ServerCancelMsg(type="cancelled", task_id=task_id).model_dump()))
             else:
                  logging.info(f"Task {task_id}: Completed")
-                 asyncio.create_task(send_message(websocket, ws_schemas.ServerResultMsg(type="result", task_id=task_id, data=result).dict()))
+                 asyncio.create_task(send_message(websocket, ws_schemas.ServerResultMsg(type="result", task_id=task_id, data=result).model_dump()))
 
     except Exception as e:
         logging.info(f"Task handler error for {task_id}: {e}")
-        asyncio.create_task(send_message(websocket, ws_schemas.ServerErrorMsg(type="error", task_id=task_id, detail=f"Task handler internal error", status_code=500).dict()))
+        asyncio.create_task(send_message(websocket, ws_schemas.ServerErrorMsg(type="error", task_id=task_id, detail=f"Task handler internal error", status_code=500).model_dump()))
 
 
 
@@ -787,9 +801,47 @@ logging.info(f"Serving static from {frontend_build_dir}")
 app.mount("/", StaticFiles(directory=frontend_build_dir, html=True), name="static")
 
 
+def exeunt_with_electron(server: uvicorn.Server) -> None:
+    """
+    Shut down when Electron parent disappears
+    Avoids lingering vnicorn run on force-quit
+    Ignored w/ Singularity/Apptainer
+    """
+    if os.environ.get("LOGION_LAUNCHER") != "electron":
+        logging.info("Not launched by Electron; stdin exit detection disabled.")
+        return
+
+    if sys.stdin is None or sys.stdin.closed:
+        logging.info("stdin pipe unavailable. Server may continue after app closes.")
+        return
+
+    def _wait() -> None:
+        try:
+            while sys.stdin.readline():
+                pass
+        except Exception:
+            pass
+        logging.info("Electron process closed. Shutting down.")
+        server.should_exit = True
+        time.sleep(10)
+        os._exit(1)
+
+    threading.Thread(target=_wait, daemon=True).start()
+
+
 if __name__ == "__main__":
-    host = os.environ.get("LOGION_HOST")
-    port = int(os.environ.get("LOGION_PORT"))
-    logging.info(f"Spawning Logion server on http://{host}:{port}")
-    uvicorn.run(app, host=host, port=port)
-    
+    host = os.environ.get("LOGION_HOST") or "127.0.0.1"
+    # assign free port if 8000 taken
+    requested_port = int(os.environ.get("LOGION_PORT") or 0)
+    # bind socket to prevent other process claiming port
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind((host, requested_port))
+    actual_port = sock.getsockname()[1]
+
+    print(f"__LOGION_PORT__={actual_port}", flush=True)
+    logging.info(f"Spawning Logion server on http://{host}:{actual_port}")
+
+    config = uvicorn.Config(app, timeout_graceful_shutdown=5)
+    server = uvicorn.Server(config)
+    exeunt_with_electron(server)
+    server.run(sockets=[sock])

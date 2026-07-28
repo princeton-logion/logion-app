@@ -4,7 +4,7 @@ import { handleWordColor } from '../utils/detectResultsUtils';
 import PredictionPopover from './popOvers/PredictionPopover';
 import CCRPopover from './popOvers/CCRPopover';
 
-const isPunctuation = (word) => /^[.,;:·!?()«»""]+$/.test(word);
+const isPunctuation = (word) => /^[.,;;:·!?()«»""]+$/.test(word);
 
 const DetectionResultsDisplay = ({
     taskStatus,

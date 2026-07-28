@@ -37,7 +37,8 @@ function CharPredictionPage() {
           .then((data) => {
               setModelOptions(data);
               if (data && data.length > 0 && !selectedModel) {
-                    setSelectedModel(data[0]);
+                    // default if none selected 
+                    setSelectedModel((prev) => prev || data[0].name);
                 }
           })
           .catch((error) => console.error("Unable to fetch models.", error));
@@ -122,7 +123,7 @@ function CharPredictionPage() {
     const textToDisplay = currentTask?.status === 'success' ? currentTask.results?.origText : null;
 
     const isInputValid = inputText.trim() !== '' && inputText.includes('-');
-    const predictButtonDisabled = !isInputValid || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing'));
+    const predictButtonDisabled = !isInputValid || !selectedModel || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing'));
     const cancelButtonEnabled = currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing');
 
     const textareaClasses = `form-control form-control-lg ${isInputValid ? 'is-valid' : ''} ${currentTask?.status === 'error' ? 'is-invalid' : ''}`;

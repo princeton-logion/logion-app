@@ -25,8 +25,9 @@ class Logion:
         self.sm = torch.nn.Softmax(dim=1)
         torch.set_grad_enabled(False)
 
-        is_latin_subword = getattr(Tokenizer, "name_or_path", "") == "latincy/latin-bert"
-        if is_latin_subword:
+        # single source of truth for the tokenizer's word-boundary convention
+        self.is_latin_subword = getattr(Tokenizer, "name_or_path", "") == "latincy/latin-bert"
+        if self.is_latin_subword:
             self.blacklist_ids = blacklist.get_latin_blacklist_ids(Tokenizer)
             self.blacklist_chars = {
                 Tokenizer.convert_ids_to_tokens([tid])[0].rstrip("_") for tid in self.blacklist_ids
@@ -123,9 +124,7 @@ class Logion:
 
     
     def display_sentence(self, toks):
-        is_latin_subword = getattr(self.Tokenizer, "name_or_path", "") == "latincy/latin-bert"
-
-        if is_latin_subword:
+        if self.is_latin_subword:
             s = ''
             for i, tok in enumerate(toks):
                 ends_word = tok.endswith("_")
@@ -357,14 +356,13 @@ class Logion:
     
     # convert list of sub-tokens into word
     def _display_word(self, toks):
-        is_latin_subword = getattr(self.Tokenizer, "name_or_path", "") == "latincy/latin-bert"
         s = ''
         for i, tok_id in enumerate(toks):
             # convert tkn ID to string
             tok = self.Tokenizer.convert_ids_to_tokens([tok_id])[0]
             if not isinstance(tok, str): tok = str(tok)
 
-            if is_latin_subword:
+            if self.is_latin_subword:
                 ends_word = tok.endswith('_')
                 if ends_word:
                     # rmv '_'
