@@ -790,16 +790,24 @@ async def get_models():
     except Exception as e:
         logging.info(f"Unexpected error in /models endpoint: {e}")
         raise HTTPException(status_code=500, detail="Unable to access models.")
+    
 
-
+class CachedStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs):
+        resp = super().file_response(*args, **kwargs)
+        if "text/html" in (resp.media_type or ""):
+            resp.headers["Cache-Control"] = "no-cache"
+        else:
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
 # pull static dir from dir and log for debugging
 frontend_build_dir = os.environ.get("STATIC_DIR")
 if not frontend_build_dir or not os.path.isdir(frontend_build_dir):
     logging.info(f"Unable to find static at {frontend_build_dir}")
     sys.exit(1)
 logging.info(f"Serving static from {frontend_build_dir}")
-app.mount("/", StaticFiles(directory=frontend_build_dir, html=True), name="static")
-
+# mount static
+app.mount("/", CachedStaticFiles(directory=frontend_build_dir, html=True), name="static")
 
 def exeunt_with_electron(server: uvicorn.Server) -> None:
     """

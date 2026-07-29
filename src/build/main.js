@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
@@ -255,6 +255,7 @@ app.whenReady().then(async () => {
     const isBackendReady = await wait4ServerReady();
 
     if (isBackendReady) {
+        await session.defaultSession.clearCache();
         if (loadingWindow) loadingWindow.close();
         createMainWindow();
     } else {

@@ -35,10 +35,13 @@ function CharPredictionPage() {
       fetch("models")
           .then((response) => response.json())
           .then((data) => {
-              setModelOptions(data);
-              if (data && data.length > 0 && !selectedModel) {
-                    // default if none selected 
-                    setSelectedModel((prev) => prev || data[0].name);
+              const models = (Array.isArray(data) ? data : []).map((m) =>
+                  typeof m === "string" ? { name: m } : m
+              );
+              setModelOptions(models);
+              if (models.length > 0 && !selectedModel) {
+                    // default if none selected
+                    setSelectedModel((prev) => prev || models[0].name);
                 }
           })
           .catch((error) => console.error("Unable to fetch models.", error));

@@ -5,6 +5,7 @@ import WordPredictionPage from './pages/PredictionPage';
 import CharPredictionPage from './pages/CharPredictionPage';
 import DetectionPage from './pages/DetectionPage';
 import Sidebar from './components/Sidebar';
+import ErrorBoundary from './components/ErrorBoundary';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import './App.css';
 
@@ -23,12 +24,14 @@ function App() {
       <div className="App">
         <Sidebar sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
         <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
-          <Routes>
-            <Route path="/" element={<MainPage />} />
-            <Route path="/word_prediction" element={<WordPredictionPage />} />
-            <Route path="/char_prediction" element={<CharPredictionPage />} />
-            <Route path="/detection" element={<DetectionPage />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<MainPage />} />
+              <Route path="/word_prediction" element={<WordPredictionPage />} />
+              <Route path="/char_prediction" element={<CharPredictionPage />} />
+              <Route path="/detection" element={<DetectionPage />} />
+            </Routes>
+          </ErrorBoundary>
         </div>
       </div>
     </Router>
