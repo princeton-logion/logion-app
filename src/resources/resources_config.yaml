@@ -1,18 +1,30 @@
 models:
-  - name: "Base BERT"
+  - name: "Greek BERT"
     model_path: "princeton-logion/logion-bert-base"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
     lang: "grc"
 
-  - name: "Plato BERT"
+  - name: "Plato-tuned Greek BERT"
     model_path: "princeton-logion/logion-bert-plato"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
     lang: "grc"
 
-  - name: "ATE BERT"
+  - name: "Technical-tuned Greek BERT"
     model_path: "princeton-logion/logion-bert-ate"
+    type: "bert"
+    tokenizer_path: "princeton-logion/logion-bert-base"
+    lang: "grc"
+
+  - name: "Hexameter-only Greek BERT"
+    model_path: "princeton-logion/logion-bert-hex-solum"
+    type: "bert"
+    tokenizer_path: "princeton-logion/logion-bert-base"
+    lang: "grc"
+
+  - name: "Hexameter-tuned Greek BERT"
+    model_path: "princeton-logion/logion-bert-hex-finetuned"
     type: "bert"
     tokenizer_path: "princeton-logion/logion-bert-base"
     lang: "grc"
@@ -27,7 +39,7 @@ models:
     type: "canine"
     lang: "grc"
 
-  - name: "LatinBERT"
+  - name: "Latin BERT"
     model_path: "latincy/latin-bert"
     type: "bert"
     tokenizer_path: "latincy/latin-bert"
