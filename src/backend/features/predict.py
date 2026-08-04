@@ -27,6 +27,9 @@ async def prediction_function(
         use_macronizer: bool = False,
         max_combos: int = 200,
         pool_size: int = None,
+        formular_concordance: Any = None,
+        formula_stratum_weights: Dict[str, float] = None,
+        formula_max_attestations: int = 10,
         ) -> Dict[int, List[Tuple[str, float]]]:
     """
     Masked language modeling inference for lacuna predictions using sliding window
@@ -45,6 +48,9 @@ async def prediction_function(
         use_macronizer (bool) -- resolve ambiguous vowels (α, ι, υ) w/ grc_macronizer? (deafult: False = no)
         max_combos (int) -- per-line max exhaustive metrical vetting
         pool_size (int) -- 
+        formular_concordance () -- optional formular_concordance.FormularConcordance; when given and text_type=="hexameter", corpus-attested formulaic predictionss are attested into each gap's candidate pool before metrical filtering (see predict_utils.formular_concordance_lookup)
+        formula_stratum_weights ( Dict[str, float] ) -- stratum -> interpolation weight for the formular concordance (see formular_concordance.stratum_weights); None = uniform over all strata
+        formula_max_attestations (int) -- max formula predictionss attested per gap
 
     Returns:
         final_predictions (dict) -- {mask_token_index_1: [(predicted_token_1, probability_score_1), ...], ...}
@@ -149,7 +155,7 @@ async def prediction_function(
 
         chunk_start = chunk_end
 
-    await progress_callback(95.0, "Gathering all predictions...")
+    await progress_callback(90.0, "Gathering all predictions...")
     await cancel.check_cancel_status(cancellation_event, task_id)
 
     # compile preds and rmv duplicates
@@ -164,6 +170,19 @@ async def prediction_function(
 
     # filter preds per hex_filter
     if text_type == "hexameter":
+        concordance_attestations = None
+        if formular_concordance is not None:
+            await progress_callback(95, "Retrieving attested formulae from concordance...")
+            await cancel.check_cancel_status(cancellation_event, task_id)
+            final_predictions, concordance_attestations = predict_utils.formular_concordance_lookup(
+                text=text,
+                final_predictions=final_predictions,
+                tokenizer=tokenizer,
+                concordance=formular_concordance,
+                stratum_weights=formula_stratum_weights,
+                max_attested_suggestions=formula_max_attestations,
+            )
+
         await progress_callback(96.0, "Filtering predictions per hexameter...")
         await cancel.check_cancel_status(cancellation_event, task_id)
         final_predictions = predict_utils.filter_predictions_hexameter(
@@ -172,6 +191,17 @@ async def prediction_function(
             tokenizer=tokenizer,
             use_macronizer=use_macronizer,
             max_combos=max_combos,
+            num_preds=None,
+            attested_predictions=concordance_attestations,
+        )
+
+        await progress_callback(97.0, "Rescoring verse predictions by PLL...")
+        await cancel.check_cancel_status(cancellation_event, task_id)
+        final_predictions = predict_utils.rescore_predictions_pll(
+            text=text,
+            final_predictions=final_predictions,
+            model=model,
+            tokenizer=tokenizer,
             num_preds=num_preds,
         )
 

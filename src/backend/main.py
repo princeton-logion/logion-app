@@ -4,11 +4,12 @@ import logging
 import torch
 import numpy as np
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from models import model_loader, resource_config_loader #, lev_filter_loader
+from models import model_loader, resource_config_loader, concordance_loader #, lev_filter_loader
 from utils import prediction_schemas, detection_schemas, ws_schemas
-from features import predict, predict_char_auto, detect, logion_class, cancel
+from features import predict, predict_utils, predict_char_auto, detect, logion_class, cancel, formular_concordance, clean_txt
 import random
 import include
 import uvicorn
@@ -79,16 +80,17 @@ else:
 
 MODELS_CONFIG = []
 LEV_CONFIG_ENTRY = {}
-
-
-
+CONCORDANCE_CONFIG_ENTRY = {}
+FORMULAR_CONCORDANCE = None
+_CONCORDANCE_RESOLVED = False
+_CONCORDANCE_LOCK = asyncio.Lock()
 
 async def load_app_config():
     """
     Load resources_config.yaml on app startup.
     If .yaml is ill-formed or inaccessible, exit app.
     """
-    global MODELS_CONFIG, LEV_CONFIG_ENTRY
+    global MODELS_CONFIG, LEV_CONFIG_ENTRY, CONCORDANCE_CONFIG_ENTRY
     logging.info("Retrieving resources")
     try:
         config_data = resource_config_loader.load_resource_config(RESOURCES_CONFIG)
@@ -97,17 +99,53 @@ async def load_app_config():
             logging.info("Unable to access resources_config.yaml")
             raise SystemExit("No resources available. Exiting app.")
 
-        if "models" and "lev_filter" not in config_data:
+        if "models" not in config_data:
             logging.info("Ill-formed resources_config.yaml")
             raise SystemExit("No resources available. Exiting app.")
 
         MODELS_CONFIG = config_data["models"]
-        LEV_CONFIG_ENTRY = config_data["lev_filter"]
+        LEV_CONFIG_ENTRY = config_data.get("lev_filter") or {}
+        CONCORDANCE_CONFIG_ENTRY = config_data.get("formular_concordance") or {}
         logging.info(f"Successfully loaded resources from {RESOURCES_CONFIG}")
 
     except Exception as e:
         logging.info(f"Unable to load external resources at startup: {e}")
         raise SystemExit(f"No resources available. Exiting app.")
+
+
+async def get_formular_concordance(progress_callback=None):
+    """
+    Lazily resolve concordance at first hexameter prediction task
+    """
+    global FORMULAR_CONCORDANCE, _CONCORDANCE_RESOLVED
+    if _CONCORDANCE_RESOLVED:
+        return FORMULAR_CONCORDANCE
+    async with _CONCORDANCE_LOCK:
+        if _CONCORDANCE_RESOLVED:
+            return FORMULAR_CONCORDANCE
+        if not CONCORDANCE_CONFIG_ENTRY:
+            _CONCORDANCE_RESOLVED = True
+            return None
+        loop = asyncio.get_running_loop()
+        try:
+            if progress_callback:
+                await progress_callback(
+                    5.0, "Retrieving formular concordance..."
+                )
+            concordance_path = await loop.run_in_executor(
+                None,
+                concordance_loader.resolve_concordance_path,
+                CONCORDANCE_CONFIG_ENTRY,
+            )
+            FORMULAR_CONCORDANCE = await loop.run_in_executor(
+                None, formular_concordance.FormularConcordance.load, concordance_path
+            )
+            logging.info(f"Successfully loaded concordance from {concordance_path} (strata: {', '.join(FORMULAR_CONCORDANCE.strata.keys())})")
+        except Exception as e:
+            FORMULAR_CONCORDANCE = None
+            logging.warning(f"Unable to load concordance: {e}.")
+        _CONCORDANCE_RESOLVED = True
+        return FORMULAR_CONCORDANCE
 
 
 
@@ -202,10 +240,32 @@ async def run_prediction_task(
             logging.info(f"Task {task_id}: Unable to load model: {e}")
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
 
+        text = clean_txt.normalize_grc_input(text)
         text_w_mask = re.sub(r"\-", "[MASK]", text)
 
         await progress_callback(10.0, "Initiating word prediction")
         if await cancel.check_cancel_status(cancellation_event, task_id): return None
+
+        # lazily resolve concordance
+        concordance = None
+        if text_type == "hexameter":
+            concordance = await get_formular_concordance(progress_callback)
+
+        # formular concordance stratum weights
+        formula_weights = None
+        target_stratum = getattr(request_data, "formula_target_stratum", None)
+        if concordance is not None and target_stratum:
+            if target_stratum in concordance.strata:
+                all_strata = list(concordance.strata.keys())
+                others = [t for t in all_strata if t != target_stratum]
+                formula_weights = formular_concordance.stratum_weights(
+                    [target_stratum], others, all_strata,
+                )
+            else:
+                logging.warning(
+                    f"Task {task_id}: unknown formula stratum"
+                    f"'{target_stratum}'; using uniform weights"
+                )
 
         results = await predict.prediction_function(
             text=text_w_mask,
@@ -218,6 +278,8 @@ async def run_prediction_task(
             progress_callback=progress_callback,
             cancellation_event=cancellation_event,
             text_type=text_type, 
+            formular_concordance=concordance,
+            formula_stratum_weights=formula_weights,
         )
         if results is None:
              logging.info(f"Task {task_id}: Cannot process text prediction.")
@@ -239,12 +301,34 @@ async def run_prediction_task(
                 predictions=token_predictions
             )
 
-        final_response = prediction_schemas.PredictionResponse(predictions=formatted_results)
+        # scansion payload for frontend display
+        scansion_payload = None
+        if text_type == "hexameter":
+            raw_scansion = predict_utils.restored_text_scansion(
+                text=text_w_mask,
+                final_predictions=results,
+                tokenizer=tokenizer,
+                use_macronizer=False,
+            )
+            try:
+                scansion_payload = [
+                    prediction_schemas.ScansionLine(**entry) for entry in raw_scansion
+                ]
+            except ValidationError:
+                logging.exception(
+                    f"Task {task_id}: scansion payload failed validation; "
+                    "omitting scansion from response"
+                )
+                scansion_payload = None
+
+        final_response = prediction_schemas.PredictionResponse(
+            predictions=formatted_results,
+            origText=orig_txt,
+            scansion=scansion_payload,
+        )
         await progress_callback(100.0, "Word prediction complete.")
 
-        # Return both predictions and cleaned_text
         response_dict = final_response.model_dump()
-        response_dict['origText'] = orig_txt
         logging.info(f"Response: {response_dict}")
         
         return response_dict
@@ -253,7 +337,7 @@ async def run_prediction_task(
         logging.info(f"Task {task_id}: User cancelled word prediction task.")
         return None
     except Exception as e:
-        logging.info(f"Task {task_id}: Error during word prediction task: {e}")
+        logging.exception(f"Task {task_id}: Error during word prediction task: {e}")
         raise
 
 
@@ -319,6 +403,7 @@ async def run_char_prediction_task(
             raise HTTPException(status_code=500, detail="Unable to load model.") from e
 
         text = request_data.text
+        text = clean_txt.normalize_grc_input(text)
         text_w_mask = re.sub(r"\-", "[MASK]", text)
 
         await progress_callback(10.0, "Initiating word prediction")
@@ -357,12 +442,13 @@ async def run_char_prediction_task(
                 predictions=token_predictions
             )
 
-        final_response = prediction_schemas.PredictionResponse(predictions=formatted_results)
+        final_response = prediction_schemas.PredictionResponse(
+            predictions=formatted_results,
+            origText=orig_txt,
+        )
         await progress_callback(100.0, "Character prediction complete.")
 
-        # Return both predictions and cleaned_text
         response_dict = final_response.model_dump()
-        response_dict['origText'] = orig_txt
         logging.info(f"Response: {response_dict}")
         
         return response_dict
@@ -371,7 +457,7 @@ async def run_char_prediction_task(
         logging.info(f"Task {task_id}: User cancelled character prediction task.")
         return None
     except Exception as e:
-        logging.info(f"Task {task_id}: Error during character prediction task: {e}")
+        logging.exception(f"Task {task_id}: Error during character prediction task: {e}")
         raise
 
 
@@ -512,7 +598,7 @@ async def run_detection_task(
         logging.info(f"Task {task_id}: User cancelled error detection task")
         return None
     except Exception as e:
-        logging.info(f"Task {task_id}: Error during error detection: {e}")
+        logging.exception(f"Task {task_id}: Error during error detection task: {e}")
         raise
 
 

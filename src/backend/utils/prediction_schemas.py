@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Dict, List, Annotated
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Dict, List, Optional, Tuple, Annotated
 
 
 """
@@ -69,8 +69,66 @@ class MaskedIndexPredictions(BaseModel):
     predictions: Annotated[List[TokenPrediction], Field(min_items=1)]
 
 
+class ScansionLine(BaseModel):
+    """
+    One display line of the hexameter scansion payload
+    (predict_utils.restored_text_scansion), as consumed by the frontend
+    ScansionDisplay component.  Named ScansionLine to avoid confusion
+    with hex_filter.LineScansion, the scanner-internal NamedTuple this
+    payload is derived from.
+
+    Attributes:
+        line (str) -- restored line text (every gap filled w/ its
+            top-ranked prediction)
+        syllables ( List[str] ) -- 1 display string per scanned syllable
+        markers ( List[str] ) -- 1 scan marker (L/S/X) per syllable,
+            index-aligned with syllables
+        word_breaks ( List[int] ) -- syllable indices AFTER which a word
+            boundary falls
+        segments ( List[List[Tuple[str, bool]]] ) -- per syllable, its
+            text split into (chars, is_prediction) runs; concatenation
+            of a syllable's run chars == the syllable text (serializes
+            to [[chars, bool], ...] arrays for the frontend)
+        prediction_syllables ( List[int] ) -- syllables containing >= 1
+            prediction character (coarse per-syllable flag)
+    """
+    line: str
+    syllables: List[str]
+    markers: List[str]
+    word_breaks: List[int]
+    segments: List[List[Tuple[str, bool]]]
+    prediction_syllables: List[int]
+
+    @model_validator(mode="after")
+    def check_display_alignment(self) -> "ScansionLine":
+        n = len(self.syllables)
+        if len(self.markers) != n:
+            raise ValueError("Scan markers must align 1:1 with syllables.")
+        if len(self.segments) != n:
+            raise ValueError("Character segments must align 1:1 with syllables.")
+        for syllable, runs in zip(self.syllables, self.segments):
+            if "".join(chars for chars, _ in runs) != syllable:
+                raise ValueError(
+                    "Segment character runs must concatenate to their syllable text."
+                )
+        for idx in self.word_breaks:
+            if not 0 <= idx < n:
+                raise ValueError("Word break index out of syllable range.")
+        for idx in self.prediction_syllables:
+            if not 0 <= idx < n:
+                raise ValueError("Prediction syllable index out of syllable range.")
+        allowed_markers = {"L", "S", "X"}
+        for marker in self.markers:
+            if marker not in allowed_markers:
+                raise ValueError("Scan markers must be one of: 'L', 'S', 'X'.")
+        return self
+
+
 class PredictionResponse(BaseModel):
    predictions: Dict#[int, MaskedIndexPredictions]
+   origText: Optional[str] = None
+   # verse line scansion display payload (hexameter only)
+   scansion: Optional[List[ScansionLine]] = None
 
    @field_validator("predictions")
    def validate_predictions(cls: type, predictions: Dict) -> Dict:
