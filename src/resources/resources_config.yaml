@@ -50,3 +50,7 @@ lev_filter:
   lev1: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/1.npy"
   lev2: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/2.npy"
   lev3: "https://huggingface.co/datasets/princeton-logion/lev-filters/resolve/main/3.npy"
+
+formular_concordance:
+  repo_id: princeton-logion/formular_concordance
+  filename: formular_concordance.pkl
