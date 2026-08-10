@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import PredictionPopover from './popOvers/PredictionPopover';
 import ProbabilityPopover from './popOvers/ProbabilityPopover';
+import ScansionDisplay from './ScansionDisplay';
 
 const WordPredictionResultsDisplay = ({
     taskStatus,
     predictions,
-    displayText
+    displayText,
+    scansion
 }) => {
     // track current selected character
     const [activePredictionKey, setActivePredictionKey] = useState(null);
@@ -135,6 +137,10 @@ const WordPredictionResultsDisplay = ({
                 <div className="text-highlight-container" ref={textRef}>
                     {filledTextElements}
                 </div>
+                {/* static scansion box: same width as the restored text
+                    (same column), and unaffected by the popover column's
+                    height changes when a gap is clicked */}
+                <ScansionDisplay scansion={scansion} />
             </div>
 
             <div className="col-md-5 d-flex flex-column" style={{ minWidth: 0 }}>

@@ -390,13 +390,13 @@ async def run_char_prediction_task(
             )
 
         try:
-            model, char_stoi, char_itos, mask_id = model_loader.load_character_mlm(model_name)
+            model, char_stoi, char_itos, mask_id = model_loader.load_tiresias(model_name)
             # model = model_loader.patch_char_model_for_mps(model)
-            # device, model = model_loader.load_device(model)
+            device, model = model_loader.load_device(model)
             # use cpu until MPS error resolved
-            logging.info(f"CUDA available: {torch.cuda.is_available()}")
-            device = torch.device("cpu")
-            logging.info(f"Using device {device}.")
+            #logging.info(f"CUDA available: {torch.cuda.is_available()}")
+            #device = torch.device("cpu")
+            #logging.info(f"Using device {device}.")
             model = model.to(device)
         except Exception as e:
             logging.info(f"Task {task_id}: Unable to load model: {e}")

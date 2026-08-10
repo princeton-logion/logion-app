@@ -4,6 +4,7 @@
 *.log
 vale-edit.py
 vale_output.json
+build_index.py
 .env
 
 # Byte-compiled / optimized / DLL files

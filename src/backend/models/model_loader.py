@@ -17,153 +17,50 @@ import logging
 import torch
 import torch.nn as nn
 from safetensors.torch import load_file
-from transformers import CanineConfig
-from . import char_model
 from huggingface_hub import hf_hub_download
+from . import tiresias
 
 
-def load_character_mlm(model_path: str, vocab_path: str = None, use_auth_token: str = None, cache_dir: str = None):
+def load_tiresias(model_path: str,
+                  vocab_path: str = None,
+                  use_auth_token: str = None,
+                  cache_dir: str = None):
     """
-    Load custom character model from HF or local
-
-        Paramters:
-            model_path (str) --
-            vocab_path (str) --
-            use_auth_token (str) --
-            cache_dir (str) -- 
-        
-        Returns:
-            model --
-            char_stoi -- 
-            char_itos --
-            mask_id -- 
+    Load Tiresias MLM from HF or local via AutoModel
     """
-    is_remote = "/" in model_path and not os.path.exists(model_path)
-    
-    if is_remote:
-        print(f"Retrieving model from HF: {model_path}...")
-        
-        try:
-            config_path = hf_hub_download(
-                repo_id=model_path,
-                filename="config.json",
-                token=use_auth_token,
-                cache_dir=cache_dir
-            )
-            
-            model_file = None
-            try:
-                model_file = hf_hub_download(
-                    repo_id=model_path,
-                    filename="model.safetensors",
-                    token=use_auth_token,
-                    cache_dir=cache_dir
-                )
-                use_safetensors = True
-            except:
-                try:
-                    model_file = hf_hub_download(
-                        repo_id=model_path,
-                        filename="pytorch_model.bin",
-                        token=use_auth_token,
-                        cache_dir=cache_dir
-                    )
-                    use_safetensors = False
-                except:
-                    raise FileNotFoundError(f"Cannot find model weights at {model_path}")
-            
-            if vocab_path is None:
-                try:
-                    vocab_path = hf_hub_download(
-                        repo_id=model_path,
-                        filename="vocab.json",
-                        token=use_auth_token,
-                        cache_dir=cache_dir
-                    )
-                except:
-                    raise FileNotFoundError(f"Cannot find vocab at {model_path}")
-                    
-        except Exception as e:
-            raise RuntimeError(f"Failed to load model from {model_path}: {e}")
-            
-    else:
-        config_path = os.path.join(model_path, "config.json")
-        model_file_sf = os.path.join(model_path, "model.safetensors")
-        model_file_bin = os.path.join(model_path, "pytorch_model.bin")
-        
-        if os.path.exists(model_file_sf):
-            model_file = model_file_sf
-            use_safetensors = True
-        elif os.path.exists(model_file_bin):
-            model_file = model_file_bin
-            use_safetensors = False
-        else:
-            raise FileNotFoundError(f"Cannot find model weights at {model_path}")
-            
-        if vocab_path is None:
+    if vocab_path is None:
+        if os.path.isdir(model_path):
             vocab_path = os.path.join(model_path, "vocab.json")
-            if not os.path.exists(vocab_path):
-                raise FileNotFoundError(f"Cannot find vocab at {model_path}")
-    
-    print(f"Retrieving model vocab...")
+        else:
+            vocab_path = hf_hub_download(repo_id=model_path, filename="vocab.json",
+                                         token=use_auth_token, cache_dir=cache_dir)
+
     with open(vocab_path, "r", encoding="utf-8") as f:
         char_stoi = json.load(f)
+
+    missing = [t for t in ("[PAD]", "[MASK]", "[CLS]", "[SEP]", "[UNK]") if t not in char_stoi]
+    if missing:
+        raise ValueError(f"vocab.json at {vocab_path} missing special tokens: {missing}")
+
     char_itos = {v: k for k, v in char_stoi.items()}
-    pad_id = char_stoi["[PAD]"]
     mask_id = char_stoi["[MASK]"]
-    vocab_size = len(char_stoi)
-    
-    print(f"Retrieving model config...")
-    with open(config_path, 'r') as f:
-        config_dict = json.load(f)
-    
-    config = CanineConfig(**{k: v for k, v in config_dict.items() 
-                            if k in CanineConfig().to_dict()})
-    
-    if all(k in config_dict for k in ['gbst_dim', 'mask_token_id']):
-        training_config = {
-            'gbst_dim': config_dict['gbst_dim'],
-            'gbst_max_block_size': config_dict.get('gbst_max_block_size', 8),
-            'gbst_downsample_factor': config_dict.get('gbst_downsample_factor', config.downsampling_rate),
-            'num_hash_functions': config_dict.get('num_hash_functions', 8),
-            'num_hash_buckets': 16000,
-            'max_span_length': config_dict.get('max_span_length', 10)
-        }
-    else:
-        training_config = {
-            'gbst_dim': config.hidden_size,
-            'gbst_max_block_size': 8,
-            'gbst_downsample_factor': config.downsampling_rate,
-            'num_hash_functions': 8,
-            'num_hash_buckets': 16000,
-            'max_span_length': 10
-        }
-    
-    print(f"Initializing model architecture...")
-    model = char_model.CharformerCanineForMaskedLM(
-        config=config,
-        vocab_size=vocab_size,
-        pad_token_id=pad_id,
-        mask_token_id=mask_id,
-        gbst_dim=training_config['gbst_dim'],
-        gbst_max_block_size=training_config['gbst_max_block_size'],
-        gbst_downsample_factor=training_config['gbst_downsample_factor'],
-        num_hash_functions=training_config['num_hash_functions'],
-        num_hash_buckets=training_config['num_hash_buckets'],
-        max_span_length=training_config['max_span_length']
+
+    logging.info(f"Loading Tiresias model from {model_path}")
+    model = AutoModelForMaskedLM.from_pretrained(
+        model_path, token=use_auth_token, cache_dir=cache_dir,
+        dtype=torch.float32,
     )
-    
-    print(f"Retrieving model weights...")
-    if use_safetensors:
-        state_dict = load_file(model_file)
-    else:
-        state_dict = torch.load(model_file, map_location='cpu')
-    
-    model.load_state_dict(state_dict, strict=False)
     model.eval()
-    
-    print(f"Model loaded successfully from {'HF' if is_remote else 'local path'}")
-    
+
+    # as precaution, check model formatted correct
+    cfg = model.config
+    if cfg.vocab_size != len(char_stoi):
+        raise ValueError(f"config vocab_size {cfg.vocab_size} != vocab.json size {len(char_stoi)}")
+    if cfg.mask_token_id != mask_id:
+        raise ValueError(f"config mask_token_id {cfg.mask_token_id} != vocab.json [MASK] id {mask_id}")
+    if cfg.pad_token_id != char_stoi["[PAD]"]:
+        raise ValueError(f"config pad_token_id {cfg.pad_token_id} != vocab.json [PAD] id {char_stoi['[PAD]']}")
+
     return model, char_stoi, char_itos, mask_id
 
 def load_encoder(model_path: str, 
@@ -233,14 +130,14 @@ def load_device(model: torch.nn.Module):
     return device, model
 
 
-def patch_char_model_for_mps(model: torch.nn.Module):
-    """
-    Disable nested tensor in TransformerEncoder layers per 
-    'aten::_nested_tensor_from_mask_left_aligned' MPS error
-    """
-    for module in model.modules():
-        if isinstance(module, nn.TransformerEncoder):
-            module.enable_nested_tensor = False
-            module.use_nested_tensor = False
+# def patch_char_model_for_mps(model: torch.nn.Module):
+#     """
+#     Disable nested tensor in TransformerEncoder layers per 
+#     'aten::_nested_tensor_from_mask_left_aligned' MPS error
+#     """
+#     for module in model.modules():
+#         if isinstance(module, nn.TransformerEncoder):
+#             module.enable_nested_tensor = False
+#             module.use_nested_tensor = False
 
-    return model
+#     return model

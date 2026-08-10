@@ -149,6 +149,7 @@ function WordPredictionPage() {
 
     const predictionsToDisplay = currentTask?.status === 'success' ? currentTask.results?.predictions : null;
     const textToDisplay = currentTask?.status === 'success' ? currentTask.results?.origText : null;
+    const scansionToDisplay = currentTask?.status === 'success' ? currentTask.results?.scansion : null;
 
     const isInputValid = inputText.trim() !== '' && inputText.includes('-');
     const predictButtonDisabled = !isInputValid || !selectedModel || !isConnected || (currentTask && (currentTask.status === 'pending' || currentTask.status === 'processing'));
@@ -168,7 +169,7 @@ function WordPredictionPage() {
             paddingLeft: '40px',
             display: 'inline-block' 
         }}>
-    <li><strong>Choose</strong> a model from the dropdown menu</li>
+    <li><strong>Choose</strong> a BERT model appropriate for your text.</li>
     <li><strong>Enter</strong> your text in the text area</li>
     <li><strong>Type</strong> one dash (<strong>-</strong>) for each missing <span style={{ textDecoration: 'underline' }}>word</span>:
     <div style={{marginLeft: '10px', paddingLeft: '15px', textIndent: '-15px', color: '#555' }}>
@@ -239,6 +240,7 @@ function WordPredictionPage() {
                                 taskStatus={currentTask?.status}
                                 predictions={predictionsToDisplay}
                                 displayText={textToDisplay}
+                                scansion={scansionToDisplay}
                             />
                         </div>
                     </div>
