@@ -45,7 +45,7 @@ jobs:
       - name: Build backend exec -- macOS
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --onefile --paths . --additional-hooks-dir=pyi_hooks --add-data "../resources/resources_config.yaml;." --add-data "../../requirements.txt;." --hidden-import=models --hidden-import=utils --hidden-import=features main.py
+          pyinstaller --onefile --paths . --additional-hooks-dir=pyi_hooks --add-data "../resources/resources_config.yaml:." --add-data "../../requirements.txt:." --hidden-import=models --hidden-import=utils --hidden-import=features main.py
         working-directory: ./src/backend/
 
       - name: Create Artifact -- Win
