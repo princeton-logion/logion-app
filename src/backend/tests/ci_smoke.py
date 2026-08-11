@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
-"""CI smoke test: launch the frozen backend, run word + char predictions via the real API."""
+"""
+CI smoke test for actual API:
+    launch frozen backend
+    run word
+    run char predictions
+"""
 import asyncio, json, sys, time, uuid, urllib.request
 
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 BASE = "http://127.0.0.1:8000"
-STARTUP_TIMEOUT = 180      # onefile self-extraction + torch import is slow first run
-TASK_TIMEOUT = 1500        # includes first-time HF model downloads on the runner
+STARTUP_TIMEOUT = 180
+TASK_TIMEOUT = 1500
 
 def wait_for_backend():
     deadline = time.time() + STARTUP_TIMEOUT
