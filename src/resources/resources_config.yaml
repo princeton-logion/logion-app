@@ -34,7 +34,7 @@ models:
     type: "canine"
     lang: "grc"
 
-  - name: "Character model TEST"
+  - name: "Character model 10.8"
     model_path: "princeton-logion/tiresias-sans-diacritics"
     type: "tiresias"
     lang: grc

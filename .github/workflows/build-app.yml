@@ -96,6 +96,22 @@ jobs:
           npm install
         working-directory: ./src/build/
 
+      - name: Smoke test backend exec -- Win
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          STATIC_DIR: ${{ github.workspace }}/src/frontend/build
+        run: |
+          $backend = Start-Process -FilePath ./src/backend/dist/main.exe -PassThru -NoNewWindow `
+            -RedirectStandardOutput backend_out.log -RedirectStandardError backend_err.log
+          try {
+            python src/backend/tests/ci_smoke.py
+            if ($LASTEXITCODE -ne 0) { throw "smoke test failed" }
+          } finally {
+            Get-Content backend_out.log, backend_err.log -ErrorAction SilentlyContinue
+            if (!$backend.HasExited) { Stop-Process -Id $backend.Id -Force }
+          }
+
       - name: Build Electron App
         run: |
           npm run build
