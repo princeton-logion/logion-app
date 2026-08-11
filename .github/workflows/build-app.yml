@@ -117,6 +117,30 @@ jobs:
           npm run build
         working-directory: ./src/build/
 
+      - name: Smoke test packaged app -- Win
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          $app = Start-Process -FilePath "./src/build/dist/win-unpacked/Logion.exe" -PassThru
+          try {
+            python src/backend/tests/ci_smoke.py
+            if ($LASTEXITCODE -ne 0) { throw "packaged-app smoke test failed" }
+          } finally {
+            Get-ChildItem "$env:APPDATA\*ogion*\logs\*.log" -ErrorAction SilentlyContinue | Get-Content -Tail 60
+            taskkill /PID $app.Id /T /F 2>$null
+          }
+
+      - name: Smoke test packaged app -- macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          APP_BIN=$(ls -d src/build/dist/mac*/Logion.app/Contents/MacOS/Logion | head -1)
+          "$APP_BIN" & APP_PID=$!
+          trap 'kill $APP_PID 2>/dev/null; pkill -f "extraResources/main" 2>/dev/null || true' EXIT
+          python3 src/backend/tests/ci_smoke.py
+          tail -60 ~/Library/Logs/*ogion*/main.log 2>/dev/null || true
+
       - name: Load Packaged App -- Win
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
