@@ -29,12 +29,12 @@ models:
     tokenizer_path: "princeton-logion/logion-bert-base"
     lang: "grc"
 
-  - name: "Character model V1"
-    model_path: "princeton-logion/char-model-linear-30"
-    type: "canine"
+  - name: "Character model"
+    model_path: "princeton-logion/tiresias-cum-diacritics"
+    type: "tiresias"
     lang: "grc"
 
-  - name: "Character model 10.8"
+  - name: "Character model (sans diacritics)"
     model_path: "princeton-logion/tiresias-sans-diacritics"
     type: "tiresias"
     lang: grc
